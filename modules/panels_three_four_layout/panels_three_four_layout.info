@@ -1,0 +1,14 @@
+; $Id: panels_three_four_layout.info,v 1.1 2010/08/23 22:07:12 bdziewierz Exp $
+
+name = Panels Three Four Layout
+description = Adaptive 3x3 and 4x4 grid layout for Panels module.
+core = 6.x
+package = "Panels"
+dependencies[] = ctools
+dependencies[] = panels
+; Information added by drupal.org packaging script on 2010-08-23
+version = "6.x-1.0"
+core = "6.x"
+project = "panels_three_four_layout"
+datestamp = "1282602407"
+

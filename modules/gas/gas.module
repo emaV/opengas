@@ -1,0 +1,28 @@
+<?php
+
+function gas_og_create_links($group) {
+  global $user;
+  $post_types = og_get_types('group_post');
+  $post_type = 'sheetnode';
+  $types = node_get_types();
+  if(in_array($post_type, $post_types)) {
+    // We used to check for node_access(create) but then node admins would get a false positive and see node types that they could not create.
+    // When this becomes a proper menu in D6, we get sorting for free
+    $type_name = $types[$post_type]->name;
+    $type_url_str = str_replace('_', '-', $post_type);
+    if (module_invoke($types[$post_type]->module, 'access', 'create', $post_type, $user)) {
+
+      $links["create_xls"] = l(t('Create !type', array('!type' => 'Sheetnode (xls)')), "node/add/xls", array(
+        'attributes' => array('title' => t('Add a new !type in this group.', array('!type' => 'Sheetnode (xls)'))),
+        'query' => "gids[]=$group->nid",
+        ));
+      $links["create_googlesheet"] = l(t('Create !type', array('!type' => 'Sheetnode (google)')), "node/add/googlesheet", array(
+        'attributes' => array('title' => t('Add a new !type in this group.', array('!type' => 'Sheetnode (google)'))),
+        'query' => "gids[]=$group->nid",
+        ));
+    }
+  }
+  return isset($links) ? $links : array();
+}
+
+include_once('gas.features.inc');

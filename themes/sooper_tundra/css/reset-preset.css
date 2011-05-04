@@ -1,0 +1,541 @@
+/**
+*  [ 1 ] RESET BROWSER STYLES (BASED ON ERIC MEYERS RESET RELOADED)
+*/
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, font, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+dl, dt, dd, ol, body ul, body  ul li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td {
+margin: 0;
+padding: 0;
+border: 0;
+outline: 0;
+font-size: 100%;
+font-family: inherit;
+}
+:focus {
+	outline: 0;
+}
+ol, ul {
+list-style: none;
+}
+/* tables still need 'cellspacing="0"' in the markup */
+table {
+border-collapse: separate;
+border-spacing: 0;
+}
+caption, th, td {
+text-align: left;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+content: "";
+}
+blockquote, q {
+quotes: "" "";
+}
+a:hover
+,a:focus {
+text-decoration:none;
+}
+
+/**
+*  [ 2 ] RESET DRUPAL STYLES
+*/
+
+ul.menu li.leaf,
+ul.menu li.expanded,
+ul.menu li.collapsed {
+list-style-image:none;
+}
+
+body ul.links li {
+display:inline-block;
+}
+
+ul.secondary li {
+border:none;
+padding:0;
+display:inline-block;
+}
+
+body blockquote p {
+margin:0;
+padding:0;
+}
+
+.messages {
+background-color: #fff;
+clear:both;
+border: 1px solid #b8d3e5;
+padding:0.5em;
+margin:1em 0;
+font-size:90%;
+}
+
+.preview {
+background-color: #fcfce8;
+border: 1px solid #e5e58f;
+}
+
+div.status {
+color: #3a3;
+border-color: #c7f2c8;
+}
+
+div.error {
+color: #c52020;
+}
+
+div.warning {
+border-color:#ccc;
+}
+
+/**
+ * LOGIN BLOCK
+ */
+
+#block-user-0 #user-login-form {
+text-align:left;
+}
+
+#block-user-0 div.item-list ul {
+margin:0;
+padding:0;
+}
+#block-user-0 div.item-list ul li {
+margin:0;
+padding:0;
+list-style:none;
+list-style-type:none;
+}
+
+/**
+ * MOD DBLOG
+ */
+tr.dblog-user {
+  background-color: #fcf9e5;
+}
+
+tr.dblog-user td.active {
+  background-color: #fbf5cf;
+}
+
+tr.dblog-content {
+  background-color: #fefefe;
+}
+
+tr.dblog-content td.active {
+  background-color: #f5f5f5;
+}
+
+tr.dblog-warning {
+  background-color: #fdf5e6;
+}
+
+tr.dblog-warning td.active {
+  background-color: #fdf2de;
+}
+
+tr.dblog-error {
+  background-color: #fbe4e4;
+}
+
+tr.dblog-error td.active {
+  background-color: #fbdbdb;
+}
+tr.dblog-page-not-found, tr.dblog-access-denied {
+  background: #d7ffd7;
+}
+tr.dblog-page-not-found td.active, tr.dblog-access-denied td.active {
+  background: #c7eec7;
+}
+
+/*** ADMIN OVERVIEW ***/
+
+div.admin .left {
+margin-left:0;
+}
+div.admin .right {
+margin-right:0;
+}
+
+/*** TABLES ***/
+
+td, th {
+padding: 0.3em 0.4em;
+}
+
+thead th {
+border-bottom: 2px solid #444;
+color: #494949;
+font-weight: bold;
+}
+
+th a:link, th a:visited {
+color: #88cb00;
+}
+
+tr.even, tr.odd, tbody th {
+border: solid #DDD;
+border-width: 1px 0;
+}
+
+tr.odd, tr.info {
+background-color: #eee;
+}
+
+tr.even {
+background-color: #fff;
+}
+
+tr.odd td.active {
+background-color: #DDD;
+}
+
+tr.even td.active {
+background-color: #ccc;
+}
+
+td.region, td.module, td.container {
+border-top: 1.8em solid #fff;
+border-bottom: 2px solid #DDD;
+background-color: #ddd;
+color: #455067;
+font-weight: bold;
+}
+
+/*** STATUS REPORT ***/
+table.system-status-report tr.error, table.system-status-report tr.error th {
+background-color: #fcc;
+border-color: #ebb;
+color: #200;
+}
+table.system-status-report tr.warning, table.system-status-report tr.warning th {
+background-color: #ffd;
+border-color: #eeb;
+}
+table.system-status-report tr.ok, table.system-status-report tr.ok th {
+background-color: #dfd;
+border-color: #beb;
+}
+
+/*** MOD FORUMS ***/
+
+div#forum table {
+width:100%;
+}
+
+/*** MOD COLOR ***/
+
+body.section-admin h1#content-title {
+margin-bottom:0;
+}
+
+fieldset#color_scheme_form {
+min-width:500px;
+min-height:240px;
+}
+
+div#placeholder {
+position:static;
+float:right;
+}
+
+.color-form .form-text {
+padding:8px;
+margin-bottom:6px;
+width:auto;
+}
+.color-form select {
+padding:5px;
+}
+
+#content .color-form label {
+font-weight:bold;
+width:10em;
+}
+
+#palette .lock {
+top:-35px;
+}
+
+/*** MOD ADMIN MENU ***/
+
+#admin-menu {
+position:fixed;
+}
+
+/*** MOD THEME SETTINGS API ***/
+
+div.demo-background {
+height:150px;
+width:100%;
+margin:0 0 20px 0;
+}
+
+/**
+*  [ 3 ] MISC
+*/
+
+/*** SKIP TO CONTENT ***/
+
+p#skipcontent {
+padding:0;
+margin:0;
+z-index:99999;
+}
+p#skipcontent a {
+position:absolute;
+top:8em;
+left:-99999em;
+padding:10px 60px;
+background:#fff;
+border:3px solid;
+z-index:99999;
+}
+
+p#skipcontent a:focus {
+left:45%;
+}
+
+p#skipcontent a:hover {
+background:#eee;
+}
+
+div.block-region {
+clear:both;
+}
+
+.block .content .edit {
+clear:both
+}
+
+.clearfix:after {
+content: ".";
+display: block;
+height: 0;
+clear: both;
+visibility: hidden;
+}
+
+.cornerstone {
+position:absolute;
+}
+
+.clear {
+clear:both;
+}
+
+form fieldset img {
+float:left;
+clear:both;
+padding:2px;
+}
+
+img.left {
+float:left!important;
+margin:0 20px 2px 0;
+display:block;
+}
+img.right {
+float:right!important;
+margin:0 0 2px 20px;
+display:block;
+}
+
+.float-left {
+float:left!important;
+display:block;
+}
+.float-right {
+float:right!important;
+display:block;
+}
+
+/* .hide and .close remove content, not screenreader frienly */
+
+.hide, .close, .slideshow .pager {display:none;}
+
+/**
+ * Hide elements visually, but keep them available for screen-readers.
+ *
+ * Used for information required for screen-reader users to understand and use
+ * the site where visual display is undesirable. Information provided in this
+ * manner should be kept concise, to avoid unnecessary burden on the user. Must
+ * not be used for focusable elements (such as links and form elements) as this
+ * causes issues for keyboard only or voice recognition users. "!important" is
+ * used to prevent unintentional overrides.
+ */
+.element-invisible {
+position: absolute !important;
+clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+clip: rect(1px, 1px, 1px, 1px);
+}
+
+/* Zen rollover links + Drupal 7 style outline */
+
+div.block.with-block-editing {
+position: relative;
+}
+div.block.with-block-editing:hover {
+outline:1px dashed #ddd;
+}
+
+div.edit {
+display: none!important;
+position: absolute;
+right: 0; /* LTR */
+top: 0;
+z-index: 40;
+}
+
+div.block div.edit a {
+color:#fff;
+background:#444;
+padding:2px 5px;
+font-size:10px;
+text-decoration:none;
+}
+
+div.block div.edit a:hover
+,div.block div.edit a:focus {
+text-decoration:underline;
+}
+
+div.block.with-block-editing:hover div.edit {
+display: block!important;
+}
+
+/**
+*  [ 4 ] GRID DEFAULTS
+*/
+
+
+
+/* grid-unit Control (width) */
+
+.grid-75 {
+width:75%!important;
+}
+.grid-667 {
+width:66.65%!important;
+}
+.grid-50 {
+width:50%!important;
+}
+.grid-333 {
+width:33.32%!important;
+}
+.grid-25 {
+width:25%!important;
+}
+.grid-20 {
+width:20%!important;
+}
+.grid-167 {
+width:16.65%!important;
+}
+.grid-125 {
+width:12.5%!important;
+}
+.grid-phi {
+width:61.8%!important;
+}
+.grid-phi2 {
+width:38.2%!important;
+}
+.grid-phi3 {
+width:23.6%!important;
+}
+
+ul.split2 li
+,ol.split2 li
+,div.split2 div.pane
+,div.split2 p.pane {
+width:50%;
+float:left;
+clear:none;
+}
+
+ul.split3 li
+,ol.split3 li
+,div.split3 div.pane
+,div.split3 p.pane {
+width:33.32%;
+float:left;
+clear:none;
+}
+
+ul.split4 li
+,ol.split4 li
+,div.split4 div.pane
+,div.split4 p.pane {
+width:25%;
+float:left;
+clear:none;
+}
+
+ul.split5 li
+,ol.split5 li
+,div.split5 div.pane
+,div.split5 p.pane {
+width:20%;
+float:left;
+clear:none;
+}
+
+ul.split6 li
+,ol.split6 li
+,div.split6 div.pane
+,div.split6 p.pane {
+width:16.65%;
+float:left;
+clear:none;
+}
+
+ul.split8 li
+,ol.split8 li
+,div.split8 div.pane
+,div.split8 p.pane {
+width:12.5%;
+float:left;
+clear:none;
+}
+
+ul.split9 li
+,ol.split9 li
+,div.split9 div.pane
+,div.split9 p.pane {
+width:11.1%;
+float:left;
+clear:none;
+}
+
+.split2:after
+,.split2:after
+,.split3:after
+,.split4:after
+,.split5:after
+,.split6:after
+,.split8:after
+,.split9:after {
+content: ".";
+display: block;
+height: 0;
+clear: both;
+visibility: hidden;
+}
+
+.gutter-left-right {
+margin:0 20px;
+}
+.gutter-left {
+margin:0 0 0 20px;
+}
+.gutter-right {
+margin:0 20px 0 0;
+}

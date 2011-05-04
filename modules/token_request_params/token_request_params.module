@@ -1,0 +1,258 @@
+<?php
+// $Id: token_request_params.module,v 1.1 2010/01/27 18:58:39 atheneus Exp $
+
+/**
+ * @file
+ *  Token Request Parameters
+ *
+ * This module parses URLs and tokenizes the GET and POST parameters into
+ * individual tokens that can be used in content pages via the Token filter
+ * module.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function token_request_params_help($path, $arg) {
+  $output = '';  //declare your output variable
+  switch ($path) {
+    case "admin/help#token_request_params":
+      $output = t(_token_request_params_help_text(),
+                  array('!token_filter_url' => l(t('Token Filter module'),
+                    'http://drupal.org/project/token_filter')));
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function token_request_params_perm() {
+  return array('configure token settings');
+}
+
+/**
+ * Implementation of hook_token_values().
+ * This hook is exposed by the Token module.
+ *
+ * @param $type
+ *  The current context: node, user, global, etc.
+ * @param $object
+ *  Handle to any associated object (e.g. a user object where type is 'user'.
+ *
+ * @return
+ *  An array of tokens.
+ */
+function token_request_params_token_values($type, $object = NULL) {
+
+  $methods = variable_get('token_request_params_methods', array('get' => 1));
+
+  if ('global' == $type) {
+
+    // Check to see if parameters should be tokenized on the current page
+    if (0 == _token_request_params_page_visibility()) {
+      return array();
+    }
+
+    $get_tokens = array();
+    $post_tokens = array();
+
+    if ($methods['get']) {
+      $get_tokens = _token_request_params_build_tokens('get', $_GET);
+    }
+
+    if ($methods['post']) {
+      $post_tokens = _token_request_params_build_tokens('post', $_POST);
+    }
+
+    return array_merge($get_tokens, $post_tokens);
+
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function token_request_params_menu() {
+  $items['admin/settings/token_request_params'] = array(
+    'title' => 'Token request parameters',
+    'description' => 'Configure what type of page requests should be tokenized (URL parameters and/or form parameters)',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('token_request_params_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('configure token settings'),
+    );
+
+  return $items;
+}
+
+/**
+ * Menu page callback handler for the administration site configuration form.
+ *
+ * @see token_request_params_menu()
+ */
+function token_request_params_admin_settings() {
+  $form['token_request_params_methods'] = array(
+    '#title' => t('Tokenize these request parameter methods'),
+    '#type' => 'checkboxes',
+    '#default_value' => variable_get('token_request_params_methods', array('get')),
+    '#options' => array(
+      'get' => t('Parameters passed in the URL (GET)'),
+      'post' => t('Parameters passed from Forms in HTTP headers (POST)'),
+      ),
+    );
+
+  $form['token_request_params_filter'] = array(
+    '#title' => t('Tokenize the following parameters'),
+    '#description' => t('Add each parameter to tokenize on a separate line. For
+      example: if you have two parameters on your URL &price=200&item=845 then
+      add price and item to the list below'),
+    '#type' => 'textarea',
+    '#default_value' => variable_get('token_request_params_filter', NULL),
+    );
+
+  $form['token_request_params_pages'] = array(
+    '#title' => t('Allow parameter tokens for the following pages'),
+    '#description' => t('Add the path to each page that you want to enable
+      parameters to be tokenized. If you want to enable all pages under a
+      a specific path use the * wildcard. For example: "node/*/list" will enable
+      tokenization on every node page that has a content list page'),
+    '#type' => 'textarea',
+    '#default_value' => variable_get('token_request_params_pages', NULL),
+    );
+    
+  $form['size'] = array(
+    '#title' => t('Specify maximum size of parameters allowed'),
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => FALSE,
+  );
+  
+  $form['size']['token_request_params_size'] = array(
+    '#title' => t('How many characters should be allowed in the token?'),
+    '#type' => 'textfield',
+    '#default_value' => variable_get('token_request_params_size', 50),
+  );
+  
+  $form['size']['token_request_params_trunc'] = array(
+    '#title' => t('How should values exceeding the maximum characters allowed be handled?'),
+    '#type' => 'radios',
+    '#options' => array(
+      'Do not tokenize: discard the parameter', 
+      'Tokenize: truncate the value to the maximum number of characters allowed',
+    ),
+    '#default_value' => variable_get('token_request_params_trunc', 1),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Private function to build the array of request parameter tokens for both
+ * types of request methods (GET & POST).
+ *
+ * @param $type
+ *  The type of request: either 'get' or 'post'.
+ * @param $request
+ *  Reference to the global request array: either $_GET or $_POST.
+ *
+ * @return $tokens
+ *  An array of tokens keyed by token name.
+ */
+function _token_request_params_build_tokens($type = NULL, $request = NULL) {
+
+  $tokens = array();
+  $parameters = array();
+
+  // Convert the parameter list to an array
+  $filters = preg_replace('/(\r\n?|\n)/', '%$%', variable_get('token_request_params_filter', ""));
+  $parameters = explode('%$%', $filters);
+
+  foreach ($request as $key => $value) {
+    // Filter both the key and value for plain text and construct token name
+    $token_name = t('@type-param-@key', array('@type' => $type, '@key' => $key));
+
+    // Create the token with a value if it is an allowed parameter
+    if (in_array($key, $parameters)) {
+      // Handle values that exceed the administrator specified maximum characters
+      if (strlen($value) > variable_get('token_request_params_size', 50)) {
+        // Truncate the value if that is what the admin has selected
+        if (variable_get('token_request_params_trunc')) {
+          $value = substr($value, 0, variable_get('token_request_params_size', 50));
+        }
+        else { // Do not tokenize as specified by the administrator
+          continue;
+        }
+      }
+      $tokens[$token_name] = check_plain($value);
+    }
+  }
+
+  return $tokens;
+}
+
+/**
+ * Private function to check whether tokens should be provided for the current
+ * page. This is based on the page visibility logic within block.module.
+ *
+ * @return $page_match
+ *  Indicates whether tokens should be provided or not (values 0 or 1).
+ *
+ * @see token_request_params_token_values()
+ */
+function _token_request_params_page_visibility() {
+
+  $page_match = 0;
+
+  if ($pages = variable_get('token_request_params_pages', NULL)) {
+    $path = drupal_get_path_alias($_GET['q']);
+    // Compare with the internal and path alias (if any).
+    $page_match = drupal_match_path($path, $pages);
+    if ($path != $_GET['q']) {
+      $page_match = $page_match || drupal_match_path($_GET['q'], $pages);
+    }
+  }
+
+  return $page_match;
+}
+
+/**
+ *
+ */
+function _token_request_params_help_text() {
+  $output = <<<EOF
+<p>
+The Tokenize Request Parameters module is intended to provide means to display
+parameters that are passed to a page either in the URL (GET method) or from a
+form post (POST method). In cases where you might direct your users to a third
+party transaction site, such as a payment processor or other transactional service
+and want to be able to display transactional data passed back from that third
+party site (e.g. a confirmation number, order number, final price etc.) back to
+your user then Tokenize Request Parameters will allow you to display that
+information anywhere within your pages.</p>
+<p>
+To use this module you should have the !token_filter_url installed and
+configured to ensure that content editors have permission to add tokens to
+content pages. You must then configure the token settings to specify what
+request methods (GET and/or POST) can be used to tokenize parameters and which
+parameters should be made into tokens. Specify also on which pages request
+parameters will be exposed.</p>
+<p>
+Be restrictive as possible when configuring what pages and parameters will be
+exposed as tokens and be mindful of possible security threats. Be particularly
+cautious when dealing with sensitive data.</p>
+<p>
+To use the tokens in your pages you should use the Token Filter module to
+enable the use of tokens within the content form for your content types.
+Parameters will be referenced via Token Filter via the token template:
+[token global get-param-{yourparam}]. For example: if you have a parameter
+passed on the URL called 'ordernum' (&ordernum=3432) then you will use the
+token [token global get-param-ordernum]. This token would be replaced by the
+value '3432'. If this parameter is passed from a form using the POST method
+instead, you would use the token [token global post-param-ordernum]. Easy!</p>
+EOF;
+
+  return $output;
+}

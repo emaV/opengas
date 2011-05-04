@@ -1,0 +1,11 @@
+; $Id: token_request_params.info,v 1.1 2010/01/27 18:58:39 atheneus Exp $
+name = Tokenize Request Parameters
+description = Take parameters passed on the URL or posted from Forms (e.g. ?key=value&key2=value2) and make them into tokens like [%key] and [%key2]. The tokens will be available for use in your content pages by using the Token Filter module.
+core = 6.x
+dependencies[] = token
+; Information added by drupal.org packaging script on 2010-01-27
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "token_request_params"
+datestamp = "1264620008"
+

@@ -1,0 +1,59 @@
+? 405546_filter_users_by_group.patch
+? filter_users_by_group.patch.1
+Index: modules/og_views/og_views.views.inc
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/og/modules/og_views/Attic/og_views.views.inc,v
+retrieving revision 1.13.4.11
+diff -u -p -r1.13.4.11 og_views.views.inc
+--- modules/og_views/og_views.views.inc	4 Mar 2010 07:28:59 -0000	1.13.4.11
++++ modules/og_views/og_views.views.inc	25 Jul 2010 20:41:17 -0000
+@@ -14,6 +14,9 @@ function og_views_views_handlers() {
+       'og_views_handler_filter_og_group_nid' => array(
+         'parent' => 'views_handler_filter_many_to_one',
+       ),
++      'og_views_handler_filter_og_uid_nid' => array(
++        'parent' => 'views_handler_filter_many_to_one',
++      ),
+       'og_views_handler_filter_og_type_all' => array(
+         'parent' => 'views_handler_filter',
+       ),
+@@ -407,7 +410,11 @@ function og_views_data_og_uid() {
+       'handler' => 'og_views_handler_argument_og_uid_nid',
+       'help' => t('<strong>Members</strong> are filtered for a specific group.'),
+     ),
+-  );
++    'filter' => array(
++      'handler' => 'og_views_handler_filter_og_uid_nid',
++      'help' => t('OG: Members that belong to a group'),
++    ),
++  );   
+   $data['og_uid']['groups'] = array(
+     'title' => t('User\'s groups'),
+     'help' => t('Groups that a member belongs to.'),
+@@ -420,6 +427,7 @@ function og_views_data_og_uid() {
+   $data['og_uid']['uid'] = array(
+     'title' => t('Group member'),
+     // 'help' => t('foo')
++    'field' => 'nid',
+     'filter' => array(
+       'handler' => 'views_handler_filter_user_current',
+       'help' => t("OG: Group in current user's groups"),
+Index: modules/og_views/includes/og_views_handler_filter_og_uid_nid.inc
+===================================================================
+RCS file: modules/og_views/includes/og_views_handler_filter_og_uid_nid.inc
+diff -N modules/og_views/includes/og_views_handler_filter_og_uid_nid.inc
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ modules/og_views/includes/og_views_handler_filter_og_uid_nid.inc	25 Jul 2010 20:41:17 -0000
+@@ -0,0 +1,12 @@
++<?php
++class og_views_handler_filter_og_uid_nid extends views_handler_filter_many_to_one {
++  function get_value_options() {
++    $this->value_options = $this->allowed_values();
++  }
++
++  // Get allowed values from hook_allowed_values(), if any,
++  // or from content_allowed_values();
++  function allowed_values() {
++    return og_all_groups_options();
++  }
++}

@@ -1,0 +1,93 @@
+/* $Id */
+
+body.page-admin #header,
+body.page-admin #main-menu,
+body.page-admin #main,
+body.page-admin #footer {
+  width: 80%!important;
+  min-width: 900px;
+  max-width: 1200px;
+}
+body.page-admin #sidebar-first-wrapper,
+body.page-admin #sidebar-second-wrapper {
+  display: none;
+}
+body.page-admin #content {
+  margin-left: 0;
+}
+html {
+  font-size: 12px;
+}
+#password-strength {
+  float: left;
+}
+html.js fieldset.collapsed legend a,
+html.js fieldset.collapsible legend a {
+  background-position: right 6px;
+}
+.links-wrapper .terms-inline {
+  margin: 4px 0;
+}
+ul.pager {
+  margin-top: 20px;
+}
+ul.pager li:first-child a {
+  padding: 0;
+}
+li.pager-first {
+  padding-right: 12px;
+}
+li.pager-last {
+  padding-left: 12px;
+}
+.node .links-wrapper {
+  font-size: 1em;
+}
+ul.links {
+  list-style: none;
+  font-size: 0.85em;
+  margin: 10px 0;
+}
+ul.links li {
+  display: inline;
+}
+ul.links li {
+  margin-right: 8px;
+}
+.block-profile .user-picture {
+  float: left; /* LTR */
+  margin: 0 10px 5px 0; /* LTR */
+}
+.block-profile + * {
+  clear: both;
+}
+body.page-filter #content ul {
+  margin-left: 0;
+  list-style: none;
+}
+input.form-checkbox, input.form-radio {
+  margin: 0 4px 0 0;
+}
+.page-links a {
+  border: none;
+}
+.block-aggregator .icon {
+  float: left; /* LTR */
+  margin: 2px 8px 0 0; /* LTR */
+}
+form#user-login input#edit-submit {
+  margin-top: 10px;
+}
+.block-locale ul {
+  margin: 0;
+}
+form#block-admin-display-form .warning {
+  margin: 14px 0;
+}
+.block-region {
+  margin: 10px 0;
+}
+ul.tips {
+  margin: 0 0 0 5px;
+}
+

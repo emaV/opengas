@@ -1,0 +1,51 @@
+<?php
+// $Id: token_request_params.test,v 1.1 2010/01/27 18:58:39 atheneus Exp $
+
+/**
+ * @file
+ * Tests for token_request_params module
+ */
+
+class TokenRequestParamsWebTestCase extends DrupalWebTestCase {
+
+  /**
+  * Implementation of getInfo().
+  */
+  public static function getInfo() {
+    return array(
+      'name' => 'token_request_params',
+      'description' => 'Verify that site configuration options work as expected',
+      'group' => 'Tokenize Request Parameters',
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  public function setUp() {
+    parent::setUp('token', 'token_filter', 'token_request_params');
+
+    // Create our user and login
+    $user = $this->drupalCreateUser(
+      array(
+        'access content',
+        'create page content',
+        'edit own page content',
+        'administer filters',
+        'configure token settings',
+      )
+    );
+
+    $this->drupalLogin($user);
+
+    // Configure Input Formats to enable the Token Filter
+    $edit = array(
+      'name' => 'Token Request Format',
+      'roles[2]' => TRUE,
+      'filters[token_filter/0]' => TRUE,
+      );
+    
+    $this->drupalPost('admin/settings/filters/add', $edit, 'Save configuration');
+  }
+}
+

@@ -1,0 +1,11 @@
+<?php
+// $Id: panels_three_four_layout.module,v 1.1 2010/08/23 22:07:12 bdziewierz Exp $
+
+/**
+ * Implementation of hook_ctools_plugin_directory().
+ */
+function panels_three_four_layout_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'panels' && $plugin == 'layouts') {
+    return "plugins/layouts";
+  }
+}

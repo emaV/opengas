@@ -1,0 +1,42 @@
+/* $Id: three-four-admin.css,v 1.1 2010/08/23 22:07:12 bdziewierz Exp $ */
+
+.three-four .panel-row {
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: static;
+  height: auto;
+}
+
+.three-four .panel-row .slot {
+  margin-right: 1px;
+  float: left;
+  position: static;
+}
+
+.three-four .panel-three .slot {
+  width: 33%;
+}
+
+.three-four .panel-three .slot-x2 {
+  width: 66%;
+}
+
+.three-four .panel-three .slot-x3 {
+  width: 99%;
+}
+
+.three-four .panel-four .slot {
+  width: 24.7%;
+}
+
+.three-four .panel-four .slot-x2 {
+  width: 49.4%;
+}
+
+.three-four .panel-four .slot-x3 {
+  width: 74.1%;
+}
+
+.three-four .panel-four .slot-x4 {
+  width: 99%;
+}

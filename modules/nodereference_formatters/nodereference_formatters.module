@@ -1,0 +1,451 @@
+<?php
+// $Id: nodereference_formatters.module,v 1.1.2.2 2009/04/14 20:20:37 nk Exp $
+
+/**
+ * @file
+ *   Adds four additional display styles (formatters) for Node Reference CCK field.
+ *   Fieldset, AHAH link, jQuery clueTip plugin and Thickbox.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function nodereference_formatters_help($path, $arg) {
+  switch ($path) {
+    case 'admin/modules#description':
+      return t('Node Reference formatters provides three additional display styles (formatters) for Node Reference CCK field.');
+    case 'admin/help#nodereference_formatters':
+      return t('Node Reference formatters provides three additional display styles (formatters) for Node Reference CCK field.
+<dl><dt><strong>Fieldset</strong></dt><dd>Standard Drupal collapsible fieldset where legend is referenced node title and value is node content in chosen format.</dd>
+<dt><strong>AHAH link</strong></dt><dd>Button with #ahah property and value of referenced node title. When user clicks on it referenced node is called dynamically via AHAH callback
+which is in Drupal core.</dd><dt><strong>jQuery clueTip</strong></dt><dd>Utilizes jQuery clueTip plugin, nice dynamic (ajax) content loading in a tooltip when user hovers mouse on the link.
+This plugin must be separately downloaded here:<br /><a href="http://plugins.jquery.com/project/cluetip">http://plugins.jquery.com/project/cluetip</a><br />
+Note that clueTip requires <em>jQuery dimensions plugin</em> and optionally integrates with <em>jQuery hoverIntent plugin</em> but they\'re both shipped along in the same archive.
+Once you download clueTip you can put it wherever but you have to define it\'s path on the '. l('Node Reference formatters settings', 'admin/settings/nodereference_formatters') .'.
+Default path <em>sites/all/plugins/jquery.cluetip/jquery.cluetip.js</em> is recommended as from this location you can easily use it for all other possible needs and for multi-site installations.
+jQuery clueTip plugin has many options and it\'s quite easy to configure. For more information, demo and API check this page: <a href="http://plugins.learningjquery.com/cluetip/">http://plugins.learningjquery.com/cluetip/</a>
+<br />For more details about setup and installation see README.txt file.</dd></dl>Administrators may define those three styles on <em>Display fields</em> tab for particular Node reference field.
+Additionally each of three styles has options for displaying: <em>Full node, Teaser or Custom</em>. Custom style is provided as an extra option for themers and is supposed to be overridden in <em>template.php</em> file,
+therefore node object is available in appropriate functions which are: <em>theme_nodereference_formatters_fieldset_custom($element), theme_nodereference_formatters_ahah_custom($element),
+theme_nodereference_formatters_cluetip_custom($element)</em>.');
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function nodereference_formatters_menu() {
+  $items = array();
+  $items['admin/settings/nodereference_formatters'] = array(
+    'title' => 'Node Reference formatters',
+    'description' => 'Setup paths for jQuery clueTip JS and CSS files.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_nodereference_formatters_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['nodereference/ahah'] = array(
+    'page callback' => '_nodereference_formatters_ahah',
+    'page arguments' => array('element'),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['nodereference/cluetip/%/%'] = array(
+    'page callback' => '_nodereference_formatters_cluetip',
+    'page arguments' => array(2, 3),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['nodereference/thickbox/%/%'] = array(
+    'page callback' => '_nodereference_formatters_thickbox',
+    'page arguments' => array(2, 3),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function nodereference_formatters_theme() {
+  $formatters = array('full', 'teaser', 'custom');
+  $keys = array('fieldset', 'ahah', 'cluetip', 'thickbox');
+  foreach ($formatters as $format) {
+    $theme['nodereference_formatters_formatter_fieldset_'. $format] = array(
+      'arguments' => array('element' => NULL),
+      'function' => 'theme_nodereference_formatters_formatter_fieldset',
+    );
+    $theme['nodereference_formatters_formatter_ahah_'. $format] = array(
+      'arguments' => array('form_state' => NULL),
+      'function' => 'theme_nodereference_formatters_formatter_ahah',
+    );
+    $theme['nodereference_formatters_formatter_cluetip_'. $format] = array(
+      'arguments' => array('element' => NULL),
+      'function' => 'theme_nodereference_formatters_formatter_cluetip',
+    );
+    $theme['nodereference_formatters_formatter_thickbox_reference_'. $format] = array(
+      'arguments' => array('element' => NULL),
+      'function' => 'theme_nodereference_formatters_formatter_thickbox_reference',
+    );
+  }
+  foreach ($keys as $key) {
+    switch ($key) {
+      case 'fieldset':
+        $arg = array('element' => NULL);
+      break;
+      case 'ahah':
+      case 'cluetip':
+      case 'thickbox':
+        $arg = array('nid' => NULL);
+      break;
+    }
+    $theme['nodereference_formatters_'. $key .'_custom'] = array(
+      'arguments' => $arg,
+      'function' => 'theme_nodereference_formatters_'. $key .'_custom',
+    );
+  }
+  return $theme;
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function nodereference_formatters_field_formatter_info() {
+  $formatters = array(
+    'fieldset' => array(
+      'full' => t('Fieldset: Full node'),
+      'teaser' => t('Fieldset: Teaser'),
+      'custom' => t('Fieldset: Custom'),
+    ),
+    'ahah' => array(
+      'full' => t('AHAH link: Full node'),
+      'teaser' => t('AHAH link: Teaser'),
+      'custom' => t('AHAH link: Custom'),
+    ),
+    'cluetip' => array(
+      'full' => t('clueTip: Full node'),
+      'teaser' => t('clueTip: Teaser'),
+      'custom' => t('clueTip: Custom'),
+    ),
+  );
+  if (module_exists('thickbox')) {
+    $formatters['thickbox_reference'] = array(
+        'full' => t('Thickbox: Full node'),
+        'teaser' => t('Thickbox: Teaser'),
+        'custom' => t('Thickbox: Custom'),
+      );
+  }
+  foreach ($formatters as $format => $key) {
+    foreach ($key as $k => $v) {
+      $info[$format .'_'. $k] = array(
+        'label' => $v,
+        'field types' => array('nodereference'),
+        'multiple values' => CONTENT_HANDLE_CORE,
+      );
+    }
+  }
+  return $info;
+}
+
+/**
+ * Menu callback for administration settings.
+ * Set paths to jQuery clueTip and dimensions JS and CSS files.
+ */
+function _nodereference_formatters_admin_settings() {
+  $form = array();
+  $form['nodereference_formatters_paths'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Set paths to jQuery files'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#description' => t('These settings apply for use of jQuery clueTip formatter.'),
+  );
+  $form['nodereference_formatters_paths']['nodereference_formatters_cluetip_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to jQuery clueTip file'),
+    '#default_value' => variable_get('nodereference_formatters_cluetip_path', 'sites/all/plugins/jquery.clueTip/jquery.cluetip.js'),
+    '#description' => t('Provide path to jQuery clueTip JS file, relative to your site root and without leading slash.'),
+  );
+  $form['nodereference_formatters_paths']['nodereference_formatters_dimensions_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to jQuery dimensions file'),
+    '#default_value' => variable_get('nodereference_formatters_dimensions_path', 'sites/all/plugins/jquery.clueTip/jquery.dimensions.js'),
+    '#description' => t('Provide path to jQuery dimensions file, relative to your site root and without leading slash.'),
+  );
+  $form['nodereference_formatters_paths']['nodereference_formatters_hoverintent_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to jQuery hoverIntent file (Optional)'),
+    '#default_value' => variable_get('nodereference_formatters_hoverintent_path', ''),
+    '#description' => t('Provide path to jQuery hoverIntent file (optional use), relative to your site root and without leading slash.'),
+  );
+  $form['nodereference_formatters_paths']['nodereference_formatters_cluetip_css'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to clueTip CSS file'),
+    '#default_value' => variable_get('nodereference_formatters_cluetip_css', 'sites/all/plugins/jquery.clueTip/jquery.cluetip.css'),
+    '#description' => t('Provide path to clueTip CSS file, relative to your site root and without leading slash.'),
+  );
+  $form['nodereference_formatters_thickbox'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Set parameters for Thickbox window'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#description' => t('These settings apply for use of Thickbox formatter.'),
+  );
+  $form['nodereference_formatters_thickbox']['nodereference_formatters_thickbox_width'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Width of Thickbox window'),
+    '#default_value' => variable_get('nodereference_formatters_thickbox_width', '700'),
+    '#description' => t('Dimensions in pixels, type only numbers i.e. <strong>700</strong>'),
+  );
+  $form['nodereference_formatters_thickbox']['nodereference_formatters_thickbox_height'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Height of Thickbox window'),
+    '#default_value' => variable_get('nodereference_formatters_thickbox_height', '500'),
+    '#description' => t('Dimensions in pixels, type only numbers i.e. <strong>500</strong>'),
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Theme function for 'Fieldset' formatter.
+ */
+function theme_nodereference_formatters_formatter_fieldset($element) {
+  $output = '';
+  if (!empty($element['#item']['nid']) && is_numeric($element['#item']['nid']) && ($title = _nodereference_titles($element['#item']['nid']))) {
+    if ($referenced_node = node_load($element['#item']['nid'])) {
+      $legend = _nodereference_titles($element['#item']['nid'], $referenced_node->title);
+      switch ($element['#formatter']) {
+        case 'fieldset_full':
+          $value = node_view($referenced_node, FALSE);
+        break;
+        case 'fieldset_teaser':
+          $value = node_view($referenced_node, TRUE);
+        break;
+        case 'fieldset_custom':
+          $value = theme('nodereference_formatters_fieldset_custom', $element);
+        break;
+      }
+      $output = _nodereference_formatters_fieldset($legend, $value, $collapsed=TRUE, $description=NULL);
+    }
+  }
+  return $output;
+}
+
+/**
+ * Theme function for 'AHAH link' formatter.
+ */
+function theme_nodereference_formatters_formatter_ahah(&$form_state) {
+  return drupal_get_form('nodereference_formatters_ahah_form', $form_state, $element);
+}
+
+/**
+ * Theme function for 'jQuery clueTip' formatter.
+ */
+function theme_nodereference_formatters_formatter_cluetip($element) {
+  if (!empty($element['#item']['nid']) && is_numeric($element['#item']['nid']) && ($title = _nodereference_titles($element['#item']['nid']))) {
+    _nodereference_formatters_cluetip_add_files();
+    $links = '<div class="nodereference-cluetip">';
+    $url = check_url('nodereference/cluetip/'. $element['#item']['nid'] .'/'. $element['#formatter']);
+    $links .= l($title, $url, array('attributes' => array('class' => 'nodereference-cluetip', 'rel' => $url)));
+    $links .= '</div>';
+    return $links;
+  }
+}
+
+/**
+ * Theme function for 'Thickbox' formatter.
+ */
+function theme_nodereference_formatters_formatter_thickbox_reference($element) {
+  if (!empty($element['#item']['nid']) && is_numeric($element['#item']['nid']) && ($title = _nodereference_titles($element['#item']['nid']))) {
+    $url = check_url('nodereference/thickbox/'. $element['#item']['nid'] .'/'. $element['#formatter']);
+    $query = _nodereference_formatters_get_query();//'height=330&width=512';
+    return l($title, $url, array('attributes' => array('title' => $title, 'class' => 'thickbox nodereference', 'rel' => 'gallery-'. $gid), NULL, 'query' => $query));
+  }
+}
+
+/**
+ * Helper function for 'Fieldset' formatter.
+ * Creates simple collapsible Fieldset form.
+ */
+function _nodereference_formatters_fieldset($legend, $value, $collapsed=TRUE, $description=NULL) {
+  $form['nodereference_formatters_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => $legend,
+    '#collapsible' => TRUE,
+    '#collapsed' => $collapsed,
+    '#weight' => 0,
+    '#description' => $description,
+  );
+  $form['nodereference_formatters_fieldset']['value']= array(
+    '#type'  => 'item',
+    '#value' => $value,
+  );
+  return drupal_render($form);
+}
+
+/**
+ * Helper function for 'AHAH link' formatter.
+ * Creates form with #ahah property on button element.
+ */
+function nodereference_formatters_ahah_form(&$form_state, $element) {
+  $id = $element['#node']->nid .'-'. $element['#item']['#delta'];
+  $form = array();
+  $form['#id'] = 'nodereference-ahah-form-'. $element['#item']['#delta'];
+  $form['element_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $element['#item']['nid'],
+  );
+  $form['element_formatter'] = array(
+    '#type' => 'hidden',
+    '#value' => $element['#formatter'],
+  );
+  $form['ahahlink'] = array(
+    '#type' => 'button',
+    '#value' => _nodereference_titles($element['#item']['nid']),
+    '#prefix' => '<div style="height:1em;" id="nodereference-ahah-button">',
+    '#suffix' => '</div>',
+    '#src' => '',
+    '#ahah' => array(
+      'path' => 'nodereference/ahah',
+      'wrapper' => 'nodereference-ahah-wrapper-'. $id,
+      'method' => 'replace',
+      'effect' => 'fade',
+      'event' => 'click',
+    ),
+  );
+  $form['wrapper'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id="nodereference-ahah-wrapper-'. $id .'" class="nodereference-ahah-wrapper">',
+    '#suffix' => '</div><span class="clear"></span>',
+    '#value' => ' ',
+  );
+  if (!empty($element['#item']['nid']) && is_numeric($element['#item']['nid'])) {
+    return $form;
+  }
+}
+
+/**
+ * AHAH callback, helper function for 'AHAH link' formatter.
+ * Returns referenced node in selected format and sends it to JS path.
+ */
+function _nodereference_formatters_ahah(&$form_state) {
+  $form_state = array('values' => $_POST);
+  $nid = check_plain($form_state['values']['element_nid']);
+  $formatter = check_plain($form_state['values']['element_formatter']);
+  if ($node = node_load($nid)) {
+    switch ($formatter) {
+      case 'ahah_full':
+        $output = node_view($node, FALSE);
+      break;
+      case 'ahah_teaser':
+        $output = node_view($node, TRUE);
+      break;
+      case 'ahah_custom':
+        $output = theme('nodereference_formatters_ahah_custom', $nid);
+      break;
+    }
+  }
+  drupal_json(array('status' => TRUE, 'data' => $output));
+}
+
+/**
+ * Helper function for 'jQuery clueTip' formatter.
+ * Prints referenced node in selected format for JS path.
+ */
+function _nodereference_formatters_cluetip($nid, $formatter) {
+  $node = node_load($nid);
+  switch ($formatter) {
+    case 'cluetip_teaser':
+      print node_view($node, TRUE);
+      exit();
+    break;
+    case 'cluetip_full':
+      print node_view($node);
+      exit();
+    break;
+    case 'cluetip_custom':
+      print theme('nodereference_formatters_cluetip_custom', $nid);
+      exit();
+    break;
+  }
+}
+
+/**
+ * Helper function for 'jQuery clueTip' formatter.
+ * Loads all necessary JS and CSS files.
+ */
+function _nodereference_formatters_cluetip_add_files() {
+  $path = drupal_get_path('module', 'nodereference_formatters');
+  $cluetip = variable_get('nodereference_formatters_cluetip_path', 'sites/all/plugins/jquery.clueTip/jquery.cluetip.js');
+  $dimensions = variable_get('nodereference_formatters_dimensions_path', 'sites/all/plugins/jquery.clueTip/jquery.dimensions.js');
+  $hoverintent = variable_get('nodereference_formatters_hoverintent_path', '');
+  $css = variable_get('nodereference_formatters_cluetip_css', 'sites/all/plugins/jquery.clueTip/jquery.cluetip.css');
+  drupal_add_js($cluetip);
+  drupal_add_js($dimensions);
+  if ($hoverintent) {
+    drupal_add_js($hoverintent);
+  }
+  drupal_add_js($path .'/nodereference_formatters.js');
+  drupal_add_css($css);
+}
+
+/**
+ * Helper functions for 'Thickbox' formatter.
+ * First defines size of the Thickbox window.
+ * Second prints referenced node in selected format for JS path.
+ */
+function _nodereference_formatters_get_query() {
+  $width = variable_get('nodereference_formatters_thickbox_width', '700');
+  $height = variable_get('nodereference_formatters_thickbox_height', '500');
+  return "width=$width&height=$height";
+}
+function _nodereference_formatters_thickbox($nid, $formatter) {
+  $node = node_load($nid);
+  switch ($formatter) {
+    case 'thickbox_reference_teaser':
+      print node_view($node, TRUE);
+      exit();
+    break;
+    case 'thickbox_reference_full':
+      print node_view($node);
+      exit();
+    break;
+    case 'thickbox_reference_custom':
+      print theme('nodereference_formatters_thickbox_custom', $nid);
+      exit();
+    break;
+  }
+}
+
+/**
+ * Theme functions for custom formatters.
+ * These are supposed to be overriden in 'template.php' file
+ */
+function theme_nodereference_formatters_fieldset_custom($element) {
+  if ($node = node_load($element['#item']['nid'])) {
+    return '<div class="nodereference-formatters"><p>'. $node->body .'</p></div>';
+  }
+}
+
+function theme_nodereference_formatters_ahah_custom($nid) {
+  if ($node = node_load($nid)) {
+    return '<div class="nodereference-formatters"><p>'. $node->body .'</p></div>';
+  }
+}
+
+function theme_nodereference_formatters_cluetip_custom($nid) {
+  if ($node = node_load($nid)) {
+    return '<div class="nodereference-formatters"><p>'. $node->body .'</p></div>';
+  }
+}
+
+function theme_nodereference_formatters_thickbox_custom($nid) {
+  if ($node = node_load($nid)) {
+    return '<div class="nodereference-formatters"><p>'. $node->body .'</p></div>';
+  }
+}

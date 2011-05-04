@@ -1,0 +1,16 @@
+Index: handlers/views_handler_field.inc
+===================================================================
+--- handlers/views_handler_field.inc	(revision 1135)
++++ handlers/views_handler_field.inc	(working copy)
+@@ -478,7 +478,10 @@
+ 
+     if (empty($this->last_render)) {
+       if (($this->last_render !== 0 && $this->last_render !== '0') || !empty($this->options['empty_zero'])) {
+-        $this->last_render = $this->options['empty'];
++        $alter = $this->options['alter'];
++        $alter['alter_text'] = 1;
++        $alter['text'] = $this->options['empty'];
++        $this->last_render = $this->render_text($alter);
+       }
+     }
+ 

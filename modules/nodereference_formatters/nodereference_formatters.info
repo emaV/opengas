@@ -1,0 +1,13 @@
+; $Id: nodereference_formatters.info,v 1.1.2.1 2009/04/14 20:20:37 nk Exp $
+name = Node Reference Formatters
+description = Adds four additional formatters for Node Reference CCK field.
+core = 6.x
+dependencies[] = nodereference
+package = CCK
+
+; Information added by drupal.org packaging script on 2009-04-14
+version = "6.x-1.2"
+core = "6.x"
+project = "nodereference_formatters"
+datestamp = "1239746774"
+

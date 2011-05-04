@@ -1,0 +1,21 @@
+<?php
+// $Id: token_request_params.install,v 1.1 2010/01/27 18:58:39 atheneus Exp $
+/**
+ * @file
+ *  Token Request Parameters Install / Uninstall File
+ *
+ * We have nothing to install, but we do need to clean up variables on
+ * uninstall
+ */
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function token_request_params_uninstall() {
+  // Be a good Drupal citizen and make sure we clean up any variables we set
+  variable_del('token_request_params_methods');
+  variable_del('token_request_params_filter');
+  variable_del('token_request_params_pages');
+
+  drupal_set_message(t('Module variables have been removed'));
+}

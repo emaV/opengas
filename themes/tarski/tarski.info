@@ -1,0 +1,53 @@
+; $Id: tarski.info,v 1.8.2.5 2010/12/31 18:56:40 jarek Exp $
+
+name        = Tarski
+description = Tarski theme
+screenshot  = screenshot.png
+version     = VERSION
+core        = 6.x
+engine      = phptemplate
+
+features[] = name
+features[] = slogan
+features[] = favicon
+features[] = comment_user_picture
+features[] = node_user_picture
+
+regions[header_menu]          = Header menu
+regions[footer_menu]          = Footer menu
+regions[content]        = Content
+regions[content_top]    = Content top
+regions[content_bottom] = Content bottom
+regions[sidebar_first]  = Sidebar first
+regions[sidebar_second] = Sidebar second
+regions[footer_column_first]  = Footer first column
+regions[footer_column_second] = Footer second column
+regions[footer_column_third]  = Footer third column
+regions[footer_column_fourth] = Footer fourth column
+
+stylesheets[all][]   = base.css
+stylesheets[all][]   = style.css
+stylesheets[all][]   = drupal-6.css
+stylesheets[print][] = print.css
+
+; disable core stylesheets
+stylesheets[all][]   = aggregator.css
+stylesheets[all][]   = book.css
+stylesheets[all][]   = node.css
+stylesheets[all][]   = poll.css
+stylesheets[all][]   = defaults.css
+stylesheets[all][]   = comment.css
+stylesheets[all][]   = system-menus.css
+stylesheets[all][]   = admin.css
+stylesheets[all][]   = user.css
+stylesheets[all][]   = system.css
+stylesheets[all][]   = forum.css
+stylesheets[all][]   = openid.css
+
+
+; Information added by drupal.org packaging script on 2010-12-31
+version = "6.x-1.9"
+core = "6.x"
+project = "tarski"
+datestamp = "1293822221"
+

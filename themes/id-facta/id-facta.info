@@ -1,0 +1,24 @@
+; $Id: id-facta.info,v 1.1 2009/03/30 00:23:51 itemplater Exp $
+name = id-facta
+description = Commercial theme by itemplater.
+version = VERSION
+core = 6.x
+engine = phptemplate
+stylesheets[all][] = style.css
+
+; Information added by drupal.org packaging script on 2008-10-22
+version = "6.9"
+project = "drupal"
+datestamp = "1224703816"
+
+regions[idFactaLeft] = Left Sidebar
+regions[idFactaUser1] = User1
+regions[idFactaSearch] = Search
+regions[idFactaFootermenu] = Footermenu
+regions[idFactaCredits] = Credits
+; Information added by drupal.org packaging script on 2009-03-30
+version = "6.x-1.1"
+core = "6.x"
+project = "id-facta"
+datestamp = "1238420445"
+

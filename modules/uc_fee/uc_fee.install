@@ -1,0 +1,211 @@
+<?php
+// $Id: uc_fee.install,v 1.1.2.5 2009/05/26 07:27:30 mrfelton Exp $
+
+/**
+ * @file
+ * Install file for the Gemini Booking module.
+ */
+  
+/**
+ * Implementation of hook_schema().
+ */
+function uc_fee_schema() {
+  $schema['uc_fees'] = array(
+    'description' => t('Fees: the fees that may apply to products.'),
+    'fields' => array(
+      'fid' => array(
+        'description' => t('Primary identifier for fees.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'price' => array(
+        'description' => t("The adjustment to a product's price with the chosen fee."),
+        'type' => 'numeric',
+        'precision' => 10,
+        'scale' => 2,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'weight' => array(
+        'description' => t('Determines the sort order of fees.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'max_applications' => array(
+        'description' => t('Determines the maximum number of times a fee may be applied.'),
+        'type' => 'int',
+        'size' => 'small',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'do_end_processing' => array(
+        'description' => t('If set, fee processing stops after this fee has been applied.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'is_exclusive' => array(
+        'description' => t('Determines the exclusivity of the fee.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'description' => array(
+        'description' => t('Description of the fee.'),
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'is_active' => array(
+        'description' => t("Determines weather or not a fee is active"),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'display_on_product' => array(
+        'description' => t("Determines weather or not a fee should display on product forms"),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'type' => array(
+        'description' => t('Binary flag to indicate fee type. (1: Absolute fee, 2: Percentage multiplier) See UC_FEE_TYPE_* constants in uc_fee.module for more detailed information.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1
+      ),
+    ),
+    'primary key' => array('fid'),
+  );
+
+  $schema['uc_class_fees'] = array(
+    'description' => t('Fees copied to a product of a certain class when it is created.'),
+    'fields' => array(
+      'pcid' => array(
+        'description' => t('The product node type.'),
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'fid' => array(
+        'description' => t('Primary identifier for fees.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'price' => array(
+        'description' => t("The adjustment to a product's price with the chosen fee."),
+        'type' => 'numeric',
+        'precision' => 10,
+        'scale' => 2,
+        'default' => NULL,
+      ),
+      'is_active' => array(
+        'description' => t("Determines weather or not a fee is applicable"),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'primary key' => array('pcid', 'fid'),
+  );
+  $schema['uc_product_fees'] = array(
+    'description' => t('Fees copied to a product.'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('The product node ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'fid' => array(
+        'description' => t('Primary identifier for fees.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'price' => array(
+        'description' => t("The adjustment to a product's price with the chosen fee."),
+        'type' => 'numeric',
+        'precision' => 10,
+        'scale' => 2,
+        'default' => NULL,
+      ),
+      'is_active' => array(
+        'description' => t("Determines weather or not a fee is applicable"),
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => NULL,
+      ),
+    ),
+    'primary key' => array('nid', 'fid'),
+  );
+  
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function uc_fee_install() {
+  // install the database table
+  $created = drupal_install_schema('uc_fee');
+  if ($created[0]['success']) {
+    drupal_set_message(t('Ubercart Fee module installed successfully.'));
+  }
+  else {
+    drupal_set_message(t('Table installation for the Ubercart Fee module was unsuccessful. The tables may need to be installed by hand. See the uc_fee.install file for the database schema.'), 'error');
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function uc_fee_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'uc_fee%'");
+  drupal_uninstall_schema('uc_fee');
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function uc_fee_update_6001() {
+  $ret = array();
+  db_add_field($ret, 'uc_fees', 'display_on_product', array(
+    'type' => 'int', 'size' => 'tiny', 'not null' => TRUE, 'default' => 1, 'description' => 'Determines weather or not a fee should display on product forms.'
+  ));
+  $ret[] = update_sql('UPDATE uc_fees SET display_on_product = 1');
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function uc_fee_update_6002() {
+  $ret = array();
+  db_add_field($ret, 'uc_fees', 'type', array(
+    'type' => 'int', 'size' => 'tiny', 'not null' => TRUE, 'default' => 1, 'description' => 'Binary flag to indicate fee type. (1: Absolute fee, 2: Percentage multiplier) See UC_FEE_TYPE_* constants in uc_fee.module for more detailed information.'
+  ));
+  $ret[] = update_sql('UPDATE uc_fees SET type = 1');
+  return $ret;
+}

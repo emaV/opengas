@@ -1,0 +1,13 @@
+/* $Id */
+.block-aggregator .icon {
+  float: right;
+  margin: 2px 0 0 8px;
+}
+html.js fieldset.collapsed legend a,
+html.js fieldset.collapsible legend a {
+  background-position: left 6px;
+}
+.block-profile .user-picture {
+  float: right;
+  margin: 0 0 5px 10px;
+}

@@ -1,0 +1,16 @@
+; $Id: uc_fee.info,v 1.1.2.4 2009/05/26 07:27:30 mrfelton Exp $
+name = Fees
+description = "Ubercart fees"
+core = 6.x
+dependencies[] = uc_store
+dependencies[] = uc_payment
+dependencies[] = uc_product
+dependencies[] = ca
+package = Ubercart - extra
+
+; Information added by drupal.org packaging script on 2009-11-16
+version = "6.x-1.0-beta2"
+core = "6.x"
+project = "uc_fee"
+datestamp = "1258399359"
+
