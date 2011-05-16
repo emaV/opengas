@@ -1448,7 +1448,7 @@ function og_form_alter(&$form, &$form_state, $form_id) {
         $form_state['og_gids'] = $_GET['gids'];
       }
       og_form_add_og_audience($form, $form_state);
-dpm($form, $form_state);
+
     }
   }
 }
