@@ -12,6 +12,9 @@ stylesheets[all][] = css/skins.css
 stylesheets[all][] = css/local-sample.css
 
 scripts[] = js/mix_and_match_script.js
+scripts[] = js/jquery.mb.flipText.js
+scripts[] = js/raphael.js
+scripts[] = js/jquery.rotate.js
 
 regions[sidebar_first] = sidebar first
 regions[sidebar_last] = sidebar last

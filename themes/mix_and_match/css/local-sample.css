@@ -1,4 +1,8 @@
 /* $Id: local-sample.css,v 1.4 2010/12/05 17:22:28 aross Exp $ */ 
+
+
+
+
 .green-accents .primary-menu-inner ul.menu li.active a,
 .green-accents .primary-menu-inner ul.menu li.active-trail a {
     color: #000;
@@ -24,6 +28,103 @@
 }
 .green-accents .primary-menu-inner ul.menu li.first {
     border-left: 0 none;
+}
+.bold {
+  font-weight: bold;
+}
+/* cart table */
+tr.even.cart-qty, tr.odd.cart-qty, .cart-qty {
+  background: #E3E5E3;
+  font-weight: bold;
+}
+table.conti .active {
+  background: #E3E5E3;
+  font-weight: bold;
+}
+table.conti tr.empty {
+  display: none;
+}
+table.conti th.active {
+  background: none;
+}
+
+table.conti th {
+  vertical-align: bottom;
+}
+table.conti th.user,
+table.conti th.tot,
+table.conti td.user,
+table.conti td.user input {
+  text-align: right;
+}
+/*
+table.conti th.user,
+table.conti td.user {
+*/
+table.conti th.tot {
+  width: 2em;
+}
+
+table.conti th.user {
+  padding: 0em;
+  height: 5em;
+  width: 2em;
+  -moz-transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -webkit-transform: rotate(-90deg);
+  transform: rotate(-90deg);
+  vertical-align: middle;
+  text-align: left;
+}
+table.conti th.rotate {
+  -moz-transform: rotate(-90deg);
+  -o-transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -webkit-transform: rotate(-90deg);
+  transform: rotate(-90deg);
+  vertical-align: middle;
+  text-align: left;
+  height: 6em;
+  width: 0em;
+  padding: 0em;
+}
+table.conti td.user.rotate {
+  width: 0em;
+  height: 0em;
+}
+table.conti td.user.rotate input {
+  width: 0em;
+  height: 0em;
+}
+
+table.conti td.user input {
+  width: 2em;
+}
+
+table.conti span.cart {
+  float: right;
+  display: none;
+}
+form.gas-ordini-form table.conti td.user input {
+  width: 3em;
+}
+/*
+form td.order input.order {
+  width: 2em;
+}
+*/
+
+/**
+ * Listino
+ */
+.view-gas-listini th.views-field-field-expiration-value,
+.view-gas-listini th.views-field-field-collection-value {
+  width: 18em;
+}
+
+.view-gas-listini th.views-field-group-nid {
+  width: 6em;
 }
 
 /**
