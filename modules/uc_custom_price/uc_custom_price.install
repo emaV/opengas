@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for uc_custom_price.module.
+ */
+
+/**
+ * Implementation of hook_schema
+ */
+function uc_custom_price_schema() {
+  $schema['uc_custom_price'] = array(
+    'description' => t('The table to store custom price code for Ubercart products.'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('Node ID'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'custom_code' => array(
+        'description' => t('The custom price code.'),
+        'type' => 'text',
+        'size' => 'normal',
+        'not null' => TRUE),
+    ),
+    'primary key' => array('nid'),
+  );
+  
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install
+ *
+ */
+function uc_custom_price_install() {
+  $created = drupal_install_schema('uc_custom_price');
+  if ($created[0]['success']) {
+    drupal_set_message(t('Ubercart Custom Price module installed successfully.'));
+  }
+  else {
+    drupal_set_message(t('Table installation for the Ubercart Custom Price module was unsuccessful. The tables may need to be installed by hand. See the uc_custom_price.install file for the database schema.'), 'error');
+  }
+}
+
+/**
+ * Implementation of hook_uninstall
+ */
+function uc_custom_price_uninstall() {
+  // Remove DB tables.
+  drupal_uninstall_schema('uc_custom_price');
+}

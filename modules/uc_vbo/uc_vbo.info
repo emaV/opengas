@@ -1,0 +1,8 @@
+name = "Ubercart VBO"
+description = "Ubercart integration with Views Bulk Operations""
+dependencies[] = ca
+dependencies[] = uc_order
+dependencies[] = uc_product
+dependencies[] = "views_bulk_operations"
+package = Ubercart - extra
+core = "6.x"

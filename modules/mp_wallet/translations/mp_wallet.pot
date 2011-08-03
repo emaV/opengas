@@ -1,0 +1,637 @@
+# $Id: mp_wallet.pot,v 1.1 2011/01/25 16:12:04 aronnovak Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  mp_wallet.admin.inc: n/a
+#  mp_wallet.inc: n/a
+#  mp_wallet.report.inc: n/a
+#  mp_wallet.module: n/a
+#  mp_wallet.info: n/a
+#  mp_wallet.install: n/a
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2010-09-09 10:07-0400\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: mp_wallet.admin.inc:17
+msgid "Site-wallet user (drupal user UID)"
+msgstr ""
+
+#: mp_wallet.admin.inc:21;46;57;62;77;90
+msgid "points"
+msgstr ""
+
+#: mp_wallet.admin.inc:22
+msgid "Credit name"
+msgstr ""
+
+#: mp_wallet.admin.inc:26;47
+msgid "point"
+msgstr ""
+
+#: mp_wallet.admin.inc:27
+msgid "Credit name in singular form"
+msgstr ""
+
+#: mp_wallet.admin.inc:32
+msgid "Credit exchange rate"
+msgstr ""
+
+#: mp_wallet.admin.inc:33
+msgid "Exhange rate between virtual money inside the site and the real-money transactions. For example if the rate is 0.5 and the user withdraws 10 virtual units, (before fee calculation), it's 5 @real."
+msgstr ""
+
+#: mp_wallet.admin.inc:38
+msgid "Numerical precision"
+msgstr ""
+
+#: mp_wallet.admin.inc:39
+msgid "Round the values to N decimal places."
+msgstr ""
+
+#: mp_wallet.admin.inc:42
+msgid "Real currency of the site: @real. You can edit it at !link"
+msgstr ""
+
+#: mp_wallet.admin.inc:42
+msgid "Payment gateways / PayPal Payments Pro"
+msgstr ""
+
+#: mp_wallet.admin.inc:43
+msgid "Real currency"
+msgstr ""
+
+#: mp_wallet.admin.inc:46
+msgid "1 @real = @virtual @name"
+msgstr ""
+
+#: mp_wallet.admin.inc:47
+msgid "1 @name = @real_v @real"
+msgstr ""
+
+#: mp_wallet.admin.inc:51
+msgid "Deposit settings"
+msgstr ""
+
+#: mp_wallet.admin.inc:57
+msgid "Minimum amount of @name to deposit"
+msgstr ""
+
+#: mp_wallet.admin.inc:62
+msgid "Maximum amount of @name to deposit"
+msgstr ""
+
+#: mp_wallet.admin.inc:64
+msgid "The purpose of this setting is mainly to prevent accidentally big deposits"
+msgstr ""
+
+#: mp_wallet.admin.inc:66
+msgid "deposits"
+msgstr ""
+
+#: mp_wallet.admin.inc:71
+msgid "Withdraw settings"
+msgstr ""
+
+#: mp_wallet.admin.inc:77
+msgid "Minimum amount of @name to withdraw"
+msgstr ""
+
+#: mp_wallet.admin.inc:80
+msgid "withdrawals"
+msgstr ""
+
+#: mp_wallet.admin.inc:84
+msgid "Donate settings"
+msgstr ""
+
+#: mp_wallet.admin.inc:90
+msgid "Minimum amount of @name to donate"
+msgstr ""
+
+#: mp_wallet.admin.inc:93
+msgid "donations"
+msgstr ""
+
+#: mp_wallet.admin.inc:96
+msgid "Default Ubercart Product Content Type"
+msgstr ""
+
+#: mp_wallet.admin.inc:100
+msgid "@name product class settings"
+msgstr ""
+
+#: mp_wallet.admin.inc:115
+msgid "Base fee for @name"
+msgstr ""
+
+#: mp_wallet.admin.inc:120
+msgid "Percentage fee for @name"
+msgstr ""
+
+#: mp_wallet.admin.inc:121
+msgid "Example value: 15, which means 15%."
+msgstr ""
+
+#: mp_wallet.admin.inc:126
+msgid "Minimum fee for @name"
+msgstr ""
+
+#: mp_wallet.admin.inc:131
+msgid "Maximum fee for @name"
+msgstr ""
+
+#: mp_wallet.inc:30;43
+msgid "This account can't be used for shopping"
+msgstr ""
+
+#: mp_wallet.inc:59;122;191
+msgid "Not enough balance"
+msgstr ""
+
+#: mp_wallet.inc:110
+msgid "This account is not available."
+msgstr ""
+
+#: mp_wallet.inc:195
+msgid "Error at the external service"
+msgstr ""
+
+#: mp_wallet.report.inc:32
+msgid "Total"
+msgstr ""
+
+#: mp_wallet.report.inc:33;53
+msgid "Year"
+msgstr ""
+
+#: mp_wallet.report.inc:34;55
+msgid "Month"
+msgstr ""
+
+#: mp_wallet.report.inc:35;58
+msgid "Week"
+msgstr ""
+
+#: mp_wallet.report.inc:42
+msgid "Current granularity: @gran"
+msgstr ""
+
+#: mp_wallet.report.inc:46
+msgid "\"@type\"s were done from @start to @end, you can browse this interval below"
+msgstr ""
+
+#: mp_wallet.report.inc:61
+msgid "Total amount"
+msgstr ""
+
+#: mp_wallet.report.inc:83
+msgid "Switch granularity: !total, !year, !month, !week"
+msgstr ""
+
+#: mp_wallet.report.inc:93
+msgid "Name"
+msgstr ""
+
+#: mp_wallet.report.inc:94
+msgid "Value"
+msgstr ""
+
+#: mp_wallet.report.inc:98
+msgid "Total @name in circulation"
+msgstr ""
+
+#: mp_wallet.report.inc:101
+msgid "Average @name balance of users"
+msgstr ""
+
+#: mp_wallet.report.inc:104
+msgid "Total no. of transactions"
+msgstr ""
+
+#: mp_wallet.report.inc:108
+msgid "Percentage of \"@name\"s"
+msgstr ""
+
+#: mp_wallet.module:178;185;20;27
+msgid "My Wallet"
+msgstr ""
+
+#: mp_wallet.module:219
+msgid "Buy this item now!"
+msgstr ""
+
+#: mp_wallet.module:300
+msgid "PayPal"
+msgstr ""
+
+#: mp_wallet.module:321;711
+msgid "The minimum amount of a withdrawal is @amount"
+msgstr ""
+
+#: mp_wallet.module:324
+msgid "Total fees applying: @fee @name, you will receive @total_r @real (@total @name) via the payment processor. 1 @name_s = @xchange @real"
+msgstr ""
+
+#: mp_wallet.module:340;855
+msgid "The minimum amount of a deposit is @amount"
+msgstr ""
+
+#: mp_wallet.module:343
+msgid "Total fees applying: @fee @name, you will be charged with @total_r @real (@total @name) via the payment processor. 1 @name_s = @xchange @real"
+msgstr ""
+
+#: mp_wallet.module:359;795
+msgid "The minimum amount of a donation is @amount"
+msgstr ""
+
+#: mp_wallet.module:362
+msgid "Total fees applying: @fee @name, the recipient will recieve @final @name"
+msgstr ""
+
+#: mp_wallet.module:402;403 mp_wallet.info:0
+msgid "Marketplace Wallet"
+msgstr ""
+
+#: mp_wallet.module:404
+msgid "Paying with @number from personal wallet."
+msgstr ""
+
+#: mp_wallet.module:427
+msgid "Review order"
+msgstr ""
+
+#: mp_wallet.module:431
+msgid "Submit order"
+msgstr ""
+
+#: mp_wallet.module:444
+msgid "Current balance: @balance @name"
+msgstr ""
+
+#: mp_wallet.module:446
+msgid "Wallet details"
+msgstr ""
+
+#: mp_wallet.module:465
+msgid "Date: @date"
+msgstr ""
+
+#: mp_wallet.module:469
+msgid "Seller: !seller"
+msgstr ""
+
+#: mp_wallet.module:470
+msgid "Buyer: !buyer"
+msgstr ""
+
+#: mp_wallet.module:472;479
+msgid "Amount for the seller: @amount @name"
+msgstr ""
+
+#: mp_wallet.module:473;480
+msgid "Amount for the buyer: @amount @name"
+msgstr ""
+
+#: mp_wallet.module:476;490;494;498
+msgid "Amount: @amount @name"
+msgstr ""
+
+#: mp_wallet.module:484
+msgid "Donation"
+msgstr ""
+
+#: mp_wallet.module:485
+msgid "Recipient: @seller"
+msgstr ""
+
+#: mp_wallet.module:486
+msgid "Amount sent: @amount @name"
+msgstr ""
+
+#: mp_wallet.module:489;837;53
+msgid "Deposit"
+msgstr ""
+
+#: mp_wallet.module:493
+msgid "Withdrawal"
+msgstr ""
+
+#: mp_wallet.module:497
+msgid "Commission"
+msgstr ""
+
+#: mp_wallet.module:510
+msgid "Date"
+msgstr ""
+
+#: mp_wallet.module:511;518;521
+msgid "Details"
+msgstr ""
+
+#: mp_wallet.module:512
+msgid "Amount"
+msgstr ""
+
+#: mp_wallet.module:513
+msgid "Balance after"
+msgstr ""
+
+#: mp_wallet.module:536
+msgid "@id at %type"
+msgstr ""
+
+#: mp_wallet.module:538
+msgid "[edit identifiers]"
+msgstr ""
+
+#: mp_wallet.module:569
+msgid "To be able to withdraw money from your wallet, supply your payment processor account under !link"
+msgstr ""
+
+#: mp_wallet.module:569
+msgid "identifiers"
+msgstr ""
+
+#: mp_wallet.module:584
+msgid "The requested page is not available with the site wallet"
+msgstr ""
+
+#: mp_wallet.module:602
+msgid "Your @name identifier"
+msgstr ""
+
+#: mp_wallet.module:608
+msgid "Save"
+msgstr ""
+
+#: mp_wallet.module:620
+msgid "This is not a valid email address"
+msgstr ""
+
+#: mp_wallet.module:627
+msgid "You need to fill at least one identifier field"
+msgstr ""
+
+#: mp_wallet.module:653
+msgid "To be able to withdraw money from your wallet, supply your payment processor info."
+msgstr ""
+
+#: mp_wallet.module:675
+msgid "Payment processor to use"
+msgstr ""
+
+#: mp_wallet.module:683
+msgid "Amount to withdraw"
+msgstr ""
+
+#: mp_wallet.module:688;76
+msgid "Withdraw"
+msgstr ""
+
+#: mp_wallet.module:707;791
+msgid "There is not enough balance"
+msgstr ""
+
+#: mp_wallet.module:735
+msgid "Internal error: the requested withdrawal handler function does not exists."
+msgstr ""
+
+#: mp_wallet.module:741
+msgid "You successfully withdrawed @amount @name via @service"
+msgstr ""
+
+#: mp_wallet.module:745
+msgid "The withdrawal was unsuccessful, @error"
+msgstr ""
+
+#: mp_wallet.module:761
+msgid "Recipient"
+msgstr ""
+
+#: mp_wallet.module:767
+msgid "Amount to donate"
+msgstr ""
+
+#: mp_wallet.module:772;45
+msgid "Donate"
+msgstr ""
+
+#: mp_wallet.module:799
+msgid "You need to specify a valid user within the site"
+msgstr ""
+
+#: mp_wallet.module:812
+msgid "You successfully donated @amount of @name to @recipient"
+msgstr ""
+
+#: mp_wallet.module:816
+msgid "The donation was unsuccessful, @error"
+msgstr ""
+
+#: mp_wallet.module:832
+msgid "Amount to add"
+msgstr ""
+
+#: mp_wallet.module:859
+msgid "The maximum amount of a deposit is @amount"
+msgstr ""
+
+#: mp_wallet.module:880;927
+msgid "Error message from PayPal:<br />@message"
+msgstr ""
+
+#: mp_wallet.module:918
+msgid "Added @amount @name to the wallet"
+msgstr ""
+
+#: mp_wallet.module:923
+msgid "An error occurred while topping your balance, contact site team to apply your deposit to your balance. Sorry for our mistake!"
+msgstr ""
+
+#: mp_wallet.module:957
+msgid "Error while wallet payment: @error"
+msgstr ""
+
+#: mp_wallet.module:961
+msgid "Payment is completed from the wallet."
+msgstr ""
+
+#: mp_wallet.module:169
+msgid "administer wallet"
+msgstr ""
+
+#: mp_wallet.module:21;68
+msgid "Wallet details with transactions."
+msgstr ""
+
+#: mp_wallet.module:28
+msgid "Wallet summary."
+msgstr ""
+
+#: mp_wallet.module:36
+msgid "Identifiers"
+msgstr ""
+
+#: mp_wallet.module:38
+msgid "Specify the identifiers of the payment processors."
+msgstr ""
+
+#: mp_wallet.module:47
+msgid "Donate credit to another user."
+msgstr ""
+
+#: mp_wallet.module:55;62
+msgid "Add money to the wallet."
+msgstr ""
+
+#: mp_wallet.module:67
+msgid "My Wallet history"
+msgstr ""
+
+#: mp_wallet.module:78
+msgid "Withdraw money from wallet."
+msgstr ""
+
+#: mp_wallet.module:84
+msgid "Transaction details"
+msgstr ""
+
+#: mp_wallet.module:85
+msgid "Transaction details with transactions."
+msgstr ""
+
+#: mp_wallet.module:107
+msgid "Wallet settings"
+msgstr ""
+
+#: mp_wallet.module:109
+msgid "Configure the wallet settings."
+msgstr ""
+
+#: mp_wallet.module:115
+msgid "Wallet reports"
+msgstr ""
+
+#: mp_wallet.module:117
+msgid "Various wallet reports."
+msgstr ""
+
+#: mp_wallet.module:122
+msgid "Deposits"
+msgstr ""
+
+#: mp_wallet.module:125
+msgid "Report on deposits."
+msgstr ""
+
+#: mp_wallet.module:130
+msgid "Sales"
+msgstr ""
+
+#: mp_wallet.module:133
+msgid "Report on sales."
+msgstr ""
+
+#: mp_wallet.module:138
+msgid "Donations"
+msgstr ""
+
+#: mp_wallet.module:141
+msgid "Report on donations."
+msgstr ""
+
+#: mp_wallet.module:146
+msgid "Withdrawals"
+msgstr ""
+
+#: mp_wallet.module:149
+msgid "Report on withdrawals."
+msgstr ""
+
+#: mp_wallet.module:154
+msgid "Statistics"
+msgstr ""
+
+#: mp_wallet.module:157
+msgid "Various statistics."
+msgstr ""
+
+#: mp_wallet.install:15;33
+msgid "Credit balance per user."
+msgstr ""
+
+#: mp_wallet.install:18;36
+msgid "User ID."
+msgstr ""
+
+#: mp_wallet.install:24
+msgid "Current balance."
+msgstr ""
+
+#: mp_wallet.install:42
+msgid "Type (like paypal / amazon"
+msgstr ""
+
+#: mp_wallet.install:57
+msgid "Transaction log of the wallet"
+msgstr ""
+
+#: mp_wallet.install:60
+msgid "Wallet transaction ID"
+msgstr ""
+
+#: mp_wallet.install:65
+msgid "Type of transaction. Can be: sell, donation, withdraw, deposit"
+msgstr ""
+
+#: mp_wallet.install:72
+msgid "Seller uid"
+msgstr ""
+
+#: mp_wallet.install:77
+msgid "Buyer uid"
+msgstr ""
+
+#: mp_wallet.install:82
+msgid "Value of transaction in credit at seller"
+msgstr ""
+
+#: mp_wallet.install:87
+msgid "Value of transaction in credit at buyer"
+msgstr ""
+
+#: mp_wallet.install:92
+msgid "Seller's new balance after the transaction"
+msgstr ""
+
+#: mp_wallet.install:97
+msgid "Buyer's new balance after the transaction"
+msgstr ""
+
+#: mp_wallet.install:102
+msgid "Übercart order id or empty if non applicable"
+msgstr ""
+
+#: mp_wallet.install:114
+msgid "Time of transaction"
+msgstr ""
+
+#: mp_wallet.info:0
+msgid "Provides one-click transactions inside the marketplace using virtual credit what is assigned to each user wallet."
+msgstr ""
+
+#: mp_wallet.info:0
+msgid "Ubercart - Marketplace"
+msgstr ""
+

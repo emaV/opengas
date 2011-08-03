@@ -1,0 +1,109 @@
+<?php
+
+/**
+ * @file
+ * Allows a block of php code to be associated with a product which can be
+ * tokenized and will be evaluated as the product is in the cart item state.
+ *
+ * Development by Chris Yu.
+ */
+
+
+/*******************************************************************************
+ * Hook Functions
+ ******************************************************************************/
+/**
+ * Implementation of hook_cart_item().
+ */
+function uc_custom_price_cart_item($op, &$item) {
+  switch ($op) {
+    case 'load':
+      $code = db_result(db_query("SELECT custom_code FROM {uc_custom_price} WHERE nid = %d", $item->nid));
+      if (!empty($code)) {
+        $product = node_load($item->nid);
+        $eval_code = token_replace_multiple($code, array('node' => $product, 'uc_cart_item' => $item));
+        eval($eval_code);
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function uc_custom_price_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'delete':
+      db_query("DELETE FROM {uc_custom_price} WHERE nid = %d", $node->nid);
+      break;
+
+    case 'load':
+      $result = db_query("SELECT * FROM {uc_custom_price} WHERE nid = %d", $node->nid);
+      if ($row = db_fetch_object($result)) {
+        return array('custom_code' => $row->custom_code);
+      }
+      break;
+
+    case 'insert':
+    case 'update':
+      if (strlen($node->custom_code) == 0) {
+        db_query("DELETE FROM {uc_custom_price} WHERE nid = %d", $node->nid);
+      }
+      else {
+        db_query("UPDATE {uc_custom_price} SET custom_code = '%s' WHERE nid = %d", $node->custom_code, $node->nid);
+        if (db_affected_rows() == 0) {
+          db_query("INSERT INTO {uc_custom_price} (nid, custom_code) VALUES (%d, '%s')", $node->nid, $node->custom_code);
+        }
+      }
+      break;
+
+    case 'view':
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function uc_custom_price_perm() {
+  return array('administer custom code');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+
+function uc_custom_price_form_alter(&$form, $form_state, $form_id) {
+  if (isset($form['type'])) {
+    $type = $form['type']['#value'];
+  }
+  elseif (isset($form['old_type'])) {
+    $type = $form['old_type']['#value'];
+  }
+  
+  $id = 'uc_product_add_to_cart_form_'. $form['nid']['#value'];
+  switch ($form_id) {
+    // Here, we allow for a per-node search block.
+    // This is not shown if the content is globally blocked
+    // Perhaps we want to include the reverse option (index a single node)?
+    case $type .'_node_form':
+      $node = node_load($form['nid']['#value']);
+      $product_types = uc_product_node_info();
+      if (isset($product_types[$form['#node']->type])) {
+        $form['custom_price_fieldset'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Custom Price Calculation'),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+          '#access' => user_access('administer custom code'),
+        );
+        $form['custom_price_fieldset']['custom_code'] = array(
+          '#type' => 'textarea',
+          '#title' => t('Custom Code'),
+          '#description' => t('Enter the code to be used for dynamic price calculation.'),
+          '#default_value' => !empty($node->custom_code) ? $node->custom_code : '$item->price = $item->price;',
+          '#access' => user_access('administer custom code'),
+        );
+      }
+    break;
+  }
+}

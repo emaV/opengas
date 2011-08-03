@@ -1,0 +1,1125 @@
+<?php
+
+// $Id: mp_wallet.module,v 1.1 2011/01/25 16:12:04 aronnovak Exp $
+
+/**
+ * @file
+ *   Adds wallet functionality for the marketplace. Users have a wallet
+ *   what contains virtual currency (credit) what can be use to buy goods
+ *   and can be bought and withdraw from the shop to involve real-world
+ *   currency.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function mp_wallet_menu() {
+  $items = array();
+
+  // Generally accessible pages
+  $items['mp-wallet'] = array(
+    'title' => 'My Wallet',
+    'description' => 'Wallet details with transactions.',
+    'page callback' => 'mp_wallet_page',
+    'page arguments' => array('history'),
+    'access callback' => 'user_is_logged_in',
+  );
+  $items['mp-wallet/history'] = array(
+    'title' => 'My Wallet',
+    'description' => 'Wallet summary.',
+    'page callback' => 'mp_wallet_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_is_logged_in',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -2,
+  );
+  $items['mp-wallet/deposit'] = array(
+    'title' => 'Deposit',
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Add money to the wallet.',
+    'page callback' => 'mp_wallet_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_is_logged_in',
+  );
+  $items['mp-wallet/donate'] = array(
+    'title' => 'Donate',
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Donate credit to another user.',
+    'page callback' => 'mp_wallet_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_is_logged_in',
+  );
+  $items['mp-wallet/withdraw'] = array(
+    'title' => 'Withdraw',
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Add money to the wallet.',
+    'page callback' => 'mp_wallet_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_is_logged_in',
+  );
+  $items['mp-wallet/deposit/complete'] = array(
+    'type' => MENU_CALLBACK,
+    'description' => 'Add money to the wallet.',
+    'page callback' => 'mp_wallet_deposit_finish',
+    'access callback' => 'user_is_logged_in',
+  );
+  $items['mp-wallet/transaction/%mp_wallet_transaction'] = array(
+    'title' => 'Transaction details',
+    'description' => 'Transaction details with transactions.',
+    'page callback' => 'mp_wallet_view_transaction',
+    'page arguments' => array(2),
+    'access callback' => 'mp_wallet_can_view_transaction',
+    'access arguments' => array(2),
+    'type' => MENU_CALLBACK,
+  );
+  $items['mp-wallet/calculate/%/%'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'mp_wallet_calculate',
+    'page arguments' => array(2, 3),
+    'access callback' => 'user_is_logged_in',
+  );
+  $items['mp-wallet/oneclick/%node/%'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'mp_wallet_oneclick',
+    'page arguments' => array(2, 3),
+    'access callback' => 'user_is_logged_in',
+  );
+
+  // Admin pages
+  $items['admin/store/settings/wallet'] = array(
+    'title' => 'Wallet settings',
+    'access arguments' => array('administer wallet'),
+    'description' => 'Configure the wallet settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mp_wallet_settings_form'),
+    'file' => 'mp_wallet.admin.inc',
+  );
+  $items['admin/store/reports/wallet'] = array(
+    'title' => 'Wallet reports',
+    'access arguments' => array('administer wallet'),
+    'description' => 'Various wallet reports.',
+    'page callback' => 'mp_wallet_report_deposit',
+    'file' => 'mp_wallet.report.inc',
+  );
+  $items['admin/store/reports/wallet/deposit'] = array(
+    'title' => 'Deposits',
+    'access arguments' => array('administer wallet'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'description' => 'Report on deposits.',
+    'page callback' => 'mp_wallet_report_deposit',
+    'file' => 'mp_wallet.report.inc',
+  );
+  $items['admin/store/reports/wallet/sell'] = array(
+    'title' => 'Sales',
+    'access arguments' => array('administer wallet'),
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Report on sales.',
+    'page callback' => 'mp_wallet_report_sell',
+    'file' => 'mp_wallet.report.inc',
+  );
+  $items['admin/store/reports/wallet/donation'] = array(
+    'title' => 'Donations',
+    'access arguments' => array('administer wallet'),
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Report on donations.',
+    'page callback' => 'mp_wallet_report_donation',
+    'file' => 'mp_wallet.report.inc',
+  );
+  $items['admin/store/reports/wallet/withdraw'] = array(
+    'title' => 'Withdrawals',
+    'access arguments' => array('administer wallet'),
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Report on withdrawals.',
+    'page callback' => 'mp_wallet_report_withdraw',
+    'file' => 'mp_wallet.report.inc',
+  );
+  $items['admin/store/reports/wallet/stats'] = array(
+    'title' => 'Statistics',
+    'access arguments' => array('administer wallet'),
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Various statistics.',
+    'page callback' => 'mp_wallet_report_stat',
+    'file' => 'mp_wallet.report.inc',
+    'weight' => 5,
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function mp_wallet_perm() {
+  return array('administer wallet');
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function mp_wallet_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks = array();
+    $blocks['mywallet'] = array('info' => t('My Wallet'), 'cache' => BLOCK_NO_CACHE);
+    return $blocks;
+  }
+  if ($op == 'view' && $delta == 'mywallet') {
+    module_load_include('inc', 'mp_wallet', 'mp_wallet');
+    global $user;
+    $content = theme('mp_wallet_mywallet', mp_wallet_get_balance($user));
+    return array('subject' => t('My Wallet'), 'content' => $content);
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function mp_wallet_theme($existing, $type, $theme, $path) {
+  return array(
+    'mp_wallet_mywallet' => array(
+      'arguments' => array('balance' => NULL),
+    ),
+    'mp_wallet_summary' => array(
+      'arguments' => array('balance' => NULL)
+    ),
+    'mp_wallet_history' => array(
+      'arguments' => array('transactions' => NULL),
+    ),
+    'mp_wallet_transaction' => array(
+      'arguments' => array('transaction' => NULL),
+    ),
+    'mp_wallet_form_info' => array(
+      'arguments' => array('info' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ * Adds one-click link to the product pages
+ */
+function mp_wallet_nodeapi(&$node, $op, $teaser, $page) {
+  if ($op == 'view' && isset($node->sell_price) && isset($node->shippable) && $node->shippable == FALSE && user_is_logged_in()) {
+    $node->content['view']['#value'] = '<div class="mp-wallet-oneclick-link">' . l(t('Buy this item now!'), 'mp-wallet/oneclick/' . $node->nid) . '</div>' . $node->content['view']['#value'];
+  }
+}
+
+/**
+ * Returns the numeric or image representation of the credit used within the site
+ */
+function mp_wallet_credit_representation($amount, $force_text = FALSE) {
+  $icon = variable_get('mp_wallet_credit_icon_path', '');
+  if (file_exists($icon) && variable_get('mp_wallet_use_icon', FALSE) && !$force_text) {
+    return '<span class="credit-icon"><img src="' . base_path() . $icon . '" /></span>';
+  }
+  if ($amount == 1 || $amount == 0) {
+    return filter_xss(variable_get('mp_wallet_credit_name_singular', t('point')));
+  }
+  return filter_xss(variable_get('mp_wallet_credit_name', t('points')));
+}
+
+/**
+ * Sanity check before buying a product, setting error messages via drupal_set_message().
+ *
+ * @param $node
+ *   Product node
+ * @return
+ *   TRUE if no errors, FALSE otherwise
+ */
+function mp_wallet_can_buy_item($node) {
+  global $user;
+  module_load_include('inc', 'mp_wallet', 'mp_wallet');
+
+  $products = array();
+  $prod = uc_product_load($node);
+  $prod = (object) array_merge((array) $prod, (array) $node);
+  $prod->qty = 1;
+  $products[] = $prod;
+
+  $site_wallet = variable_get('mp_wallet_site_wallet_uid', 1);
+
+  if ($user->uid == $site_wallet || $node->uid == $site_wallet) {
+    drupal_set_message(t('This account can\'t be used for shopping'));
+    return FALSE;
+  }
+
+  $values = mp_wallet_get_transaction_values($products, FALSE);
+  $balance = mp_wallet_get_balance($user);
+  if ($values['buyer'] > $balance) {
+    drupal_set_message(t('Not enough balance'));
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/**
+ * Determines if a user can view a transaction.
+ * Rule: always possible to view a transaction where the user is involved
+ *       and admin (uid1) and wallet administrators can see all
+ * @param $transaction
+ *   Array describing the participant user ids
+ * @return
+ *   TRUE if has access, FALSE if denied
+ *
+ */
+function mp_wallet_can_view_transaction($transaction) {
+  global $user;
+  // Allow to view own transactions
+  if ($transaction['seller'] == $user->uid || $transaction['buyer'] == $user->uid) {
+    return TRUE;
+  }
+  // Allow admin and the given right
+  if ($user->uid == 1 || user_access('administer wallet')) {
+    return TRUE;
+  }
+  // Deny all other
+  return FALSE;
+}
+
+/**
+ * Loads transaction from the database
+ *
+ * @param $wtid
+ *   Transaction id
+ * @return
+ *   Associative array of transaction data, example:
+ *   Array
+ *   (
+ *     [wtid] => 2
+ *     [type] => deposit
+ *     [seller] => 1
+ *     [buyer] => 0
+ *     [value_seller] => 200
+ *     [value_buyer] => 0
+ *     [balance_seller] => 1000
+ *     [balance_buyer] => 0
+ *     [order_id] =>
+ *     [external_id] => 4
+ *     [external_transaction_type] => paypal_expresschecko
+ *     [timestamp] => 1283458987
+ *   )
+ *
+ */
+function mp_wallet_transaction_load($wtid) {
+  $tr = db_fetch_array(db_query('SELECT * FROM {mp_wallet_transactions} WHERE wtid = %d', $wtid));
+  // Load related transactions as well (same order ID, if any)
+  if (!empty($tr['order_id'])) {
+    $result = db_query('SELECT * FROM {mp_wallet_transactions} WHERE order_id = %d AND wtid <> %d', $tr['order_id'], $wtid);
+    $tr['related'] = array();
+    while ($c_tr = db_fetch_array($result)) {
+      $tr['related'][] = $c_tr;
+    }
+  }
+  return $tr;
+}
+
+/**
+ * Supported payment processors to withdraw money
+ *
+ * @return
+ *   Array of processors
+ *   Array
+ *   (
+ *     [type] = > Human-readable label
+ *   )
+ *
+ *   To add a new processor for withdraw, need to add it to this array and need to implement mp_wallet_withdraw_by_{type} in mp_wallet.inc
+ *   @see mp_wallet_withdraw_form_submit()
+ *
+ */
+function mp_wallet_withdraw_processors() {
+  return array(
+    'paypal' => t('PayPal'),
+  );
+}
+
+/**
+ * Informs the user about occuring fees for various transactions. Called via AJAX, see mp_wallet.js
+ *
+ * @param $type
+ *   Transaction type string ('withdraw', 'deposit', 'donation')
+ * @param @amount
+ *   Amount in virtual currency
+ * @return
+ *   No return value, prints to the standard output
+ */
+function mp_wallet_calculate($type, $amount) {
+  module_load_include('inc', 'mp_wallet', 'mp_wallet');
+  $result = array();
+  switch ($type) {
+    case 'withdraw':
+      $min = variable_get('mp_wallet_min_withdraw', 5);
+      if ($amount < $min) {
+        print t('The minimum amount of a withdrawal is @amount', array('@amount' => $min));
+      }
+      else {
+        if (round(mp_wallet_get_fees($amount, 'withdraw'), variable_get('mp_wallet_precision', 3)) == 0) {
+          print '<strong>' . mp_wallet_convert_to_real(round($amount, variable_get('mp_wallet_precision', 3))) . ' ' . variable_get('uc_paypal_wpp_currency', 'USD') . '</strong>';
+        }
+        else {
+          $data = array(
+            '@fee' => round(mp_wallet_get_fees($amount, 'withdraw'), variable_get('mp_wallet_precision', 3)),
+            '!name' => mp_wallet_credit_representation(round(mp_wallet_get_fees($amount, 'withdraw'), variable_get('mp_wallet_precision', 3))),
+            '!name_s' => mp_wallet_credit_representation(1),
+            '@total' => round($amount - mp_wallet_get_fees($amount, 'withdraw'), variable_get('mp_wallet_precision', 3)),
+            '@total_r' => mp_wallet_convert_to_real(round($amount - mp_wallet_get_fees($amount, 'withdraw'), variable_get('mp_wallet_precision', 3))),
+            '@xchange' => mp_wallet_convert_to_real(1),
+            '@real' => variable_get('uc_paypal_wpp_currency', 'USD'),
+          );
+          print t('Total fees applying: @fee !name, you will receive @total_r @real (@total !name) via the payment processor. 1 !name_s = @xchange @real', $data);
+        }
+      }
+      exit();
+    case 'deposit':
+      $min = variable_get('mp_wallet_min_deposit', 5);
+      $max = variable_get('mp_wallet_max_deposit', 999);
+      if ($amount < $min) {
+        print t('The minimum amount of a deposit is @amount', array('@amount' => $min));
+      }
+      elseif ($amount > $max) {
+        print t('The maximum amount of a deposit is @amount', array('@amount' => $max));
+      }
+      else {
+        if (round(mp_wallet_get_fees($amount, 'deposit'), variable_get('mp_wallet_precision', 3)) == 0) {
+          print '<strong>' . mp_wallet_convert_to_real(round($amount + mp_wallet_get_fees($amount, 'deposit'), variable_get('mp_wallet_precision', 3))) . ' ' . variable_get('uc_paypal_wpp_currency', 'USD') . '</strong>';
+        }
+        else {
+          $data = array(
+            '@fee' => round(mp_wallet_get_fees($amount, 'deposit'), variable_get('mp_wallet_precision', 3)),
+            '!name' => mp_wallet_credit_representation(round(mp_wallet_get_fees($amount, 'deposit'), variable_get('mp_wallet_precision', 3))),
+            '!name_s' => mp_wallet_credit_representation(1),
+            '@total' => round($amount + mp_wallet_get_fees($amount, 'deposit'), variable_get('mp_wallet_precision', 3)),
+            '@total_r' => mp_wallet_convert_to_real(round($amount + mp_wallet_get_fees($amount, 'deposit'), variable_get('mp_wallet_precision', 3))),
+            '@xchange' => mp_wallet_convert_to_real(1),
+            '@real' => variable_get('uc_paypal_wpp_currency', 'USD'),
+          );
+          print t('Total fees applying: @fee !name, you will be charged with @total_r @real (@total !name) via the payment processor. 1 !name_s = @xchange @real', $data);
+        }
+      }
+      exit();
+    case 'donation':
+      $min = variable_get('mp_wallet_min_donate', 5);
+      if ($amount < $min) {
+        print t('The minimum amount of a donation is @amount', array('@amount' => $min));
+      }
+      else {
+        print t('Total fees applying: @fee !name, the recipient will recieve @final !name',
+          array(
+            '@fee' => round(mp_wallet_get_fees($amount, 'donation'), variable_get('mp_wallet_precision', 3)),
+            '!name' => mp_wallet_credit_representation(round(mp_wallet_get_fees($amount, 'donation'), variable_get('mp_wallet_precision', 3))),
+            '@final' => round($amount - mp_wallet_get_fees($amount, 'donation'), variable_get('mp_wallet_precision', 3)),
+          )
+        );
+      }
+      exit();
+  }
+}
+
+/**
+ * Viewing a transaction
+ *
+ * @param
+ *   Transaction array from mp_wallet_transaction_load().
+ * @return
+ *   Themed output of the transacton
+ */
+function mp_wallet_view_transaction($transaction) {
+  $output = theme('mp_wallet_transaction', $transaction);
+  if (!empty($transaction['related'])) {
+    $output .= 'Same order, different seller/buyer:';
+    foreach ($transaction['related'] as $tr) {
+      $output .= theme('mp_wallet_transaction', $tr);
+    }
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_payment_method().
+ *
+ * Defines a new payment method for Übercart where the payment is done from the wallet
+ */
+function mp_wallet_payment_method() {
+  if (user_is_logged_in ()) {
+    $methods[] = array(
+      'id' => 'mp_wallet',
+      'name' => t('Marketplace Wallet'),
+      'title' => t('Marketplace Wallet'),
+      'desc' => t('Paying with @number from personal wallet.', array('@number' => mp_wallet_credit_representation(2))),
+      'callback' => 'mp_wallet_payment',
+      'weight' => 2,
+      'checkout' => TRUE,
+      'backend' => TRUE,
+    );
+    return $methods;
+  }
+  return array();
+}
+
+/**
+ * Generates a link for oneclick shopping
+ *
+ * @param $product
+ *   Node object of product
+ */
+function mp_wallet_oneclick_link($product) {
+  isset($_GET['page']) ? $page_q = '&page=' . check_url($_GET['page']) : $page_q = '';
+  return url('mp-wallet/oneclick/' . $product->nid . '/' . drupal_get_token($product->nid), array('query' => 'after=' . $_GET['q'] . $page_q));
+}
+
+/**
+ * Implements one-click shopping for übercart.
+ * It puts the product into the cart and executes the whole checkout workflow programmatically
+ *
+ * @param $product
+ *   Node object of product
+ */
+function mp_wallet_oneclick($product, $token) {
+  global $user;
+  if (drupal_get_token($product->nid) != $token) {
+    drupal_goto('');
+  }
+  if (!mp_wallet_can_buy_item($product)) {
+    if (isset($_GET['after'])) {
+      isset($_GET['page']) ? $page_q = 'page=' . check_url($_GET['page']) : $page_q = NULL;
+      drupal_goto($_GET['after'], $page_q);
+    }
+    drupal_goto('node/' . $product->nid);
+    return;
+  }
+  $success = FALSE;
+  uc_cart_empty($user->uid);
+  uc_cart_add_item($product->nid, 1);
+  module_load_include('inc', 'uc_cart', 'uc_cart.pages');
+  $form_state['values']['op'] = t('Review order');
+  drupal_execute('uc_cart_checkout_form', $form_state);
+  if ($form_state['redirect'] == 'cart/checkout/review') {
+    $form_state = array();
+    $form_state['values']['op'] = t('Submit order');
+    drupal_execute('uc_cart_checkout_review_form', $form_state);
+    if ($form_state['redirect'] == 'cart/checkout/complete') {
+      uc_cart_checkout_complete();
+      $success = TRUR;
+    }
+  }
+
+  drupal_get_messages();
+  if ($success) {
+    drupal_set_message(t('The order is successfully placed.'));
+  }
+  else {
+    drupal_set_message(t('The payment is not successful'));
+  }
+  if (isset($_GET['after'])) {
+    isset($_GET['page']) ? $page_q = 'page=' . check_url($_GET['page']) : $page_q = NULL;
+    drupal_goto($_GET['after'], $page_q);
+  }
+  drupal_goto('node/' . $product->nid);
+}
+
+/**
+ * Themes the My Wallet block
+ */
+function theme_mp_wallet_mywallet($balance) {
+  $output = t('Current balance: @balance !name', array('@balance' => round($balance, variable_get('mp_wallet_precision', 3)), '!name' => mp_wallet_credit_representation(round($balance, variable_get('mp_wallet_precision', 3)))));
+  if (variable_get('mp_wallet_show_real_to_user', TRUE)) {
+    $output .= '<br /><span class="realcurrency">' . mp_wallet_convert_to_real($balance) . ' ' . variable_get('uc_paypal_wpp_currency', 'USD') . '</span>';
+  }
+  $output .= '<br / >' . l(t('Wallet details'), 'mp-wallet');
+  $output .= '<br / >' . l(t('Deposit'), 'mp-wallet/deposit');
+  return $output;
+}
+
+function theme_mp_wallet_form_info($info) {
+  $output = '<h2>' . $info['title'] . '</h2>';
+  if (!empty($info['min']) || !empty($info['max']) || !empty($info['fees'])) {
+    $output .= '<div class="mp_wallet_info">';
+    if ($info['min']) {
+      $output .= '<div class="min-amount"><span class="mp_wallet_info_label">' . t('Min.') . ' ' . $info['type'] . ':</span> ' . $info['min'] . ' ' . mp_wallet_credit_representation($info['min']) . '</div>';
+    }
+    if ($info['max']) {
+      $output .= '<div class="max-amount"><span class="mp_wallet_info_label">' . t('Max.') . ' ' . $info['type'] . ':</span> ' . $info['max'] . ' ' . mp_wallet_credit_representation($info['max']) . '</div>';
+    }
+    if (!empty($info['fees'])) {
+      $output .= '<div class="fees">';
+      $output .= '<span class="mp_wallet_info_label">' . t('Fees: ') . '</span>';
+      $output .= $info['fees']['base'] . ' ' . mp_wallet_credit_representation($info['fees']['base']);
+      if (!empty($info['fees']['percentage'])) {
+        $output .= ' + ' . $info['fees']['percentage'] . '%';
+      }
+      if (!empty($info['fees']['extra_text'])) {
+        $output .= ' <span class="mp_wallet_info_label">(includes ' . $info['fees']['extra_text'] . ')</span>';
+      }
+      $output .= '</div>';
+    }
+    $output .= '</div>';
+  }
+  return $output;
+}
+
+/**
+ * Themes the summary (basically the balance), appears at mp-wallet/summary
+ */
+function theme_mp_wallet_summary($balance) {
+  $output = '<div class="wallet-summary">';
+  $output .= t('Current balance: ');
+  $output .= '<span class="balance-summary">' . $balance . ' ' . mp_wallet_credit_representation($balance) . '</span>';
+  $output .= '</div>';
+  return $output;
+}
+
+/**
+ * Themes a transaction
+ */
+function theme_mp_wallet_transaction($tr) {
+  global $user;
+  $list = array();
+  $list[] = t('Date: @date', array('@date' => format_date($tr['timestamp'], 'large')));
+  $seller = user_load($tr['seller']);
+  $buyer = user_load($tr['buyer']);
+  if ($tr['type'] == 'sell') {
+    $list[] = t('Seller: !seller', array('!seller' => l($seller->name, 'user/' . $seller->uid)));
+    $list[] = t('Buyer: !buyer', array('!buyer' => l($buyer->name, 'user/' . $buyer->uid)));
+    if ($user->uid == $tr['seller']) {
+      $list[] = t('Amount for the seller: @amount !name', array('@amount' => $tr['value_seller'], '!name' => mp_wallet_credit_representation($tr['value_seller'])));
+      $list[] = t('Amount for the buyer: @amount !name', array('@amount' => $tr['value_buyer'], '!name' => mp_wallet_credit_representation($tr['value_buyer'])));
+    }
+    elseif ($user->uid == $tr['buyer']) {
+      $list[] = t('Amount: @amount !name', array('@amount' => $tr['value_buyer'], '!name' => mp_wallet_credit_representation($tr['value_buyer'])));
+    }
+    else {
+      $list[] = t('Amount for the seller: @amount !name', array('@amount' => $tr['value_seller'], '!name' => mp_wallet_credit_representation($tr['value_seller'])));
+      $list[] = t('Amount for the buyer: @amount !name', array('@amount' => $tr['value_buyer'], '!name' => mp_wallet_credit_representation($tr['value_buyer'])));
+    }
+  }
+  elseif ($tr['type'] == 'donation') {
+    $list[] = '<h3>' . t('Donation') . '</h3>';
+    $list[] = t('Recipient: @seller', array('@seller' => $seller->name));
+    $list[] = t('Amount sent: @amount !name', array('@amount' => $tr['value_buyer'], '!name' => mp_wallet_credit_representation($tr['value_buyer'])));
+  }
+  elseif ($tr['type'] == 'deposit') {
+    $list[] = '<h3>' . t('Deposit') . '</h3>';
+    $list[] = t('Amount: @amount !name', array('@amount' => $tr['value_seller'], '!name' => mp_wallet_credit_representation($tr['value_seller'])));
+  }
+  elseif ($tr['type'] == 'withdraw') {
+    $list[] = '<h3>' . t('Withdrawal') . '</h3>';
+    $list[] = t('Amount: @amount !name', array('@amount' => $tr['value_buyer'], '!name' => mp_wallet_credit_representation($tr['value_buyer'])));
+  }
+  elseif ($tr['type'] == 'commission') {
+    $list[] = '<h3>' . t('Commission') . '</h3>';
+    $list[] = t('Amount: @amount !name', array('@amount' => $tr['value_seller'], '!name' => mp_wallet_credit_representation($tr['value_seller'])));
+  }
+  return theme('item_list', $list);
+}
+
+/**
+ * Themes user history
+ */
+function theme_mp_wallet_history($transactions) {
+  global $user;
+  $output = '';
+  $header = array(
+    t('Date'),
+    t('Details'),
+    t('Amount'),
+    t('Balance after'),
+  );
+  $rows = array();
+  foreach ($transactions as $tr) {
+    if ($tr['seller'] == $user->uid) {
+      $rows[] = array(format_date($tr['timestamp'], 'large'), l(t('Details'), 'mp-wallet/transaction/' . $tr['wtid']), '<span class="gain">+' . round($tr['value_seller'], variable_get('mp_wallet_precision', 3)) . '</span>', round($tr['balance_seller'], variable_get('mp_wallet_precision', 3)));
+    }
+    else {
+      $rows[] = array(format_date($tr['timestamp'], 'large'), l(t('Details'), 'mp-wallet/transaction/' . $tr['wtid']), '<span class="loss">-' . round($tr['value_buyer'], variable_get('mp_wallet_precision', 3)) . '</span>', round($tr['balance_buyer'], variable_get('mp_wallet_precision', 3)));
+    }
+  }
+  $output .= theme('table', $header, $rows);
+  $output .= theme('pager', 0, variable_get('mp_wallet_history_pager', 10));
+  return $output;
+}
+
+/**
+ *
+ * User wallet page with various tabs
+ *
+ * Summary:
+ * 1. Important account information (name, banking information for the withdrawals)
+ * 2. An edit link to edit account information (especially for withdrawing credits);
+ * 3. The credits balance;
+ * History" tab with a table containing for each operation:
+ *
+ * History:
+ * 1. The date
+ * 2. A summary with a link to the details of the operation;
+ * 3. The amount;
+ * 4. The balance after the operation;
+ *
+ * Withdraw, deposit, donate tabs to do the operation
+ *
+ * Identifiers tab to add payment processor identifiers
+ *
+ */
+function mp_wallet_page($op) {
+  global $user;
+  module_load_include('inc', 'mp_wallet', 'mp_wallet');
+  if ($op == 'summary') {
+    $ids = mp_wallet_get_ids($user);
+    $ext = '';
+    $balance = mp_wallet_get_balance($user);
+    $output = theme('mp_wallet_summary', $balance);
+    if (empty($ids)) {
+      $output .= drupal_get_form('mp_wallet_identifiers_form');
+      $output .= drupal_get_form('mp_wallet_withdraw_form');
+    }
+    else {
+      $output .= drupal_get_form('mp_wallet_withdraw_form');
+      $output .= drupal_get_form('mp_wallet_identifiers_form');
+    }
+    return $output;
+  }
+  if ($op == 'history') {
+    $end = time() + 2;
+    $start = $end - 1209600; // 2 weeks
+    $transactions = mp_wallet_get_transactions($user, $start, $end);
+    return theme('mp_wallet_history', $transactions);
+  }
+  if ($op == 'deposit' || $op == 'donate' || $op == 'withdraw') {
+    if ($user->uid == variable_get('mp_wallet_site_wallet_uid', 1)) {
+      return t('The requested page is not available with the site wallet');
+    }
+    else {
+      if ($op == 'withdraw') {
+        $ids = mp_wallet_get_ids($user);
+        $output = '<div id="mp_wallet_withdraw_form_wrapper">' . drupal_get_form('mp_wallet_' . $op . '_form') . '</div>';
+        if (empty($ids)) {
+          $output .= '<div id="mp_wallet_identifiers_form_alone_wrapper">';
+          $output .= drupal_get_form('mp_wallet_identifiers_form');
+          $output .= '</div>';
+        }
+        else {
+          $output .= '<div id="mp_wallet_identifiers_change_text"><a>' . t('Change your payment processor identifiers') . '</a></div>';
+          $output .= '<div id="mp_wallet_identifiers_form_wrapper">';
+          $output .= drupal_get_form('mp_wallet_identifiers_form');
+          $output .= '</div>';
+        }
+        return $output;
+      }
+      return drupal_get_form('mp_wallet_' . $op . '_form');
+    }
+  }
+}
+
+/**
+ * Supply payment processor identifiers via this form.
+ */
+function mp_wallet_identifiers_form($form_state) {
+  global $user;
+  $ids = mp_wallet_get_ids($user);
+  $processors = mp_wallet_withdraw_processors();
+  $form = array();
+  $info = array();
+  $info['title'] = t('Payment processor identifiers');
+  $form['info']['#value'] = theme('mp_wallet_form_info', $info);
+  foreach ($processors as $name => $human) {
+    $form[$name] = array(
+      '#type' => 'textfield',
+      '#title' => t('Your @name identifier', array('@name' => $human)),
+      '#default_value' => $ids[$name],
+    );
+  }
+
+  $form['cancel']['#value'] = '<a id="mp_wallet_identifiers_form_cancel">' . t('Cancel') . '</a>';
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  drupal_add_js(drupal_get_path('module', 'mp_wallet') . '/mp_wallet.js');
+
+  return $form;
+}
+
+/**
+ * Validation handler for mp_wallet_identifiers_form().
+ */
+function mp_wallet_identifiers_form_validate($form, $form_state) {
+  $processors = mp_wallet_withdraw_processors();
+  // Processor-specific checks
+  if (!valid_email_address($form_state['values']['paypal']) && !empty($form_state['values']['paypal'])) {
+    form_set_error('paypal', t('This is not a valid email address'));
+  }
+  foreach ($processors as $name => $human) {
+    if (!empty($form_state['values'][$name])) {
+      return;
+    }
+  }
+  form_set_error('', t('You need to fill at least one identifier field'));
+}
+
+/**
+ * Submit handler for mp_wallet_identifiers_form().
+ */
+function mp_wallet_identifiers_form_submit($form, $form_state) {
+  global $user;
+  $ids = array();
+  $processors = mp_wallet_withdraw_processors();
+  foreach ($processors as $name => $human) {
+    if (!empty($form_state['values'][$name])) {
+      $ids[$name] = $form_state['values'][$name];
+    }
+  }
+
+  mp_wallet_store_ids($user, $ids);
+
+  drupal_set_message(t('The identifiers are saved'));
+}
+
+/**
+ * Form for making a withdraw from the site
+ */
+function mp_wallet_withdraw_form($form_state) {
+  global $user;
+  $ids = mp_wallet_get_ids($user);
+  if (empty($ids)) {
+    $form['warning']['#value'] = t('To be able to withdraw money from your wallet, supply your payment processor info.');
+    return $form;
+  }
+
+  $form = array();
+  $info = array(
+    'title' => t('Withdraw credits from my wallet'),
+    'min' => variable_get('mp_wallet_min_withdraw', FALSE),
+    'max' => variable_get('mp_wallet_max_withdraw', FALSE),
+    'fees' => array(
+      'base' => variable_get('mp_wallet_withdraw_fee_base', FALSE),
+      'percentage' => variable_get('mp_wallet_withdraw_fee_percentage', FALSE),
+      'extra_text' => t('payment processor fees'),
+    ),
+    'type' => t('withdraw'),
+  );
+  $form['info']['#value'] = theme('mp_wallet_form_info', $info);
+
+  // Avaliable withdraw processors, has to be an id for that
+  $processors = mp_wallet_withdraw_processors();
+  $have_id = array_keys($ids);
+  foreach ($processors as $type => $name) {
+    if (in_array($type, $have_id) === FALSE) {
+      unset($processors[$type]);
+    }
+    else {
+      $processors[$type] .= ' <span class="mp_wallet_radio_processor_id">(' . $ids[$type] . ')</span>';
+    }
+  }
+  $form['processor'] = array(
+    '#type' => 'radios',
+    '#title' => t('Payment processor to use'),
+    '#options' => $processors,
+    '#required' => TRUE,
+    '#default_value' => array_shift(array_keys($processors)),
+  );
+  $form['amount'] = array(
+    '#title' => t('Amount to withdraw'),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#size' => 5,
+    '#suffix' => '<div class="amount-calculation"></div>',
+    '#field_suffix' => mp_wallet_credit_representation(2),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Withdraw'),
+  );
+
+  // Add AJAX setting + JS file to be able to inform the user on-the-fly about fees and other info about the planned transaction.
+  $settings['mpWallet']['convert'] = url('mp-wallet/calculate/withdraw', array('absolute' => TRUE));
+  drupal_add_js($settings, 'setting');
+  drupal_add_js(drupal_get_path('module', 'mp_wallet') . '/mp_wallet.js');
+  return $form;
+}
+
+/**
+ * Validate handler for mp_wallet_withdraw_form().
+ */
+function mp_wallet_withdraw_form_validate($form, $form_state) {
+  // Checks if the balance is enough
+  global $user;
+  $balance = mp_wallet_get_balance($user);
+  $amount = (float) $form_state['values']['amount'];
+  if ($amount > $balance) {
+    form_set_error('amount', t('There is not enough balance'));
+  }
+  $min = variable_get('mp_wallet_min_withdraw', 5);
+  if ($amount < $min) {
+    form_set_error('amount', t('The minimum amount of a withdrawal is @amount', array('@amount' => $min)));
+  }
+}
+
+/**
+ * Submit handler for mp_wallet_withdraw_form().
+ */
+function mp_wallet_withdraw_form_submit($form, $form_state) {
+  global $user;
+  $service = 'paypal';
+  $amount = (float) $form_state['values']['amount'];
+
+  // 1) Record it inside the wallet and send it to the external service within the transaction
+
+  $callback = 'mp_wallet_withdraw_by_' . $service;
+  if (function_exists($callback)) {
+    $commission = mp_wallet_get_fees($amount, 'withdraw');
+    $callback_args = array($user, mp_wallet_convert_to_real($amount - $commission));
+    $success = mp_wallet_withdraw($user, $amount, $callback, $callback_args);
+    if ($success === TRUE) {
+      mp_wallet_collect_commission($commission);
+    }
+  }
+  else {
+    $success = t('Internal error: the requested withdrawal handler function does not exists.');
+  }
+
+
+  // 2) Inform user, go back to summary page
+  if (TRUE === $success) {
+    drupal_set_message(t('You successfully withdrawed @amount !name via @service', array('@amount' => $amount, '!name' => mp_wallet_credit_representation($amount), '@service' => $service)));
+    drupal_goto('mp-wallet');
+  }
+  else {
+    drupal_set_message(t('The withdrawal was unsuccessful, @error', array('@error' => $success)), 'error');
+  }
+}
+
+/**
+ * Form for making a donation to another user (just like a wire transfer to that user...)
+ */
+function mp_wallet_donate_form($form_state) {
+  $form = array();
+  $info = array(
+    'title' => t('Donate credits to another user'),
+    'min' => variable_get('mp_wallet_min_donate', FALSE),
+    'fees' => array(
+      'base' => variable_get('mp_wallet_donation_fee_base', FALSE),
+      'percentage' => variable_get('mp_wallet_donation_fee_percentage', FALSE),
+    ),
+    'type' => t('donate'),
+  );
+  $form['info']['#value'] = theme('mp_wallet_form_info', $info);
+  $form['user'] = array(
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#autocomplete_path' => 'user/autocomplete',
+    '#title' => t('Recipient'),
+  );
+  $form['amount'] = array(
+    '#type' => 'textfield',
+    '#default_value' => isset($form_state['values']['amount']) ? $form_state['values']['amount'] : $_SESSION['amount'],
+    '#required' => TRUE,
+    '#title' => t('Amount to donate'),
+    '#size' => 5,
+    '#suffix' => '<div class="amount-calculation"></div>',
+    '#field_suffix' => mp_wallet_credit_representation(2),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Donate'),
+  );
+
+  // Add AJAX setting + JS file to be able to inform the user on-the-fly about fees and other info about the planned transaction.
+  $settings['mpWallet']['convert'] = url('mp-wallet/calculate/donation', array('absolute' => TRUE));
+  drupal_add_js($settings, 'setting');
+  drupal_add_js(drupal_get_path('module', 'mp_wallet') . '/mp_wallet.js');
+  return $form;
+}
+
+/**
+ * Validation handler for mp_wallet_donate_form().
+ */
+function mp_wallet_donate_form_validate($form, $form_state) {
+  // Checks if the balance is enough
+  global $user;
+  $balance = mp_wallet_get_balance($user);
+  $amount = (float) $form_state['values']['amount'];
+  if ($amount > $balance) {
+    form_set_error('amount', t('There is not enough balance'));
+  }
+  $min = variable_get('mp_wallet_min_donate', 5);
+  if ($amount < $min) {
+    form_set_error('amount', t('The minimum amount of a donation is @amount', array('@amount' => $min)));
+  }
+  $recipient = user_load(array('name' => $form_state['values']['user']));
+  if (!is_object($recipient)) {
+    form_set_error('user', t('You need to specify a valid user within the site'));
+  }
+}
+
+/**
+ * Submit handler for mp_wallet_donate_form().
+ */
+function mp_wallet_donate_form_submit($form, $form_state) {
+  global $user;
+  $recipient = user_load(array('name' => $form_state['values']['user']));
+
+  $success = mp_wallet_donate($user, $recipient, $form_state['values']['amount']);
+  if (TRUE === $success) {
+    drupal_set_message(t('You successfully donated @amount of !name to @recipient', array('@amount' => $form_state['values']['amount'], '!name' => mp_wallet_credit_representation($form_state['values']['amount']), '@recipient' => $recipient->name)));
+    drupal_goto('mp-wallet/summary');
+  }
+  else {
+    drupal_set_message(t('The donation was unsuccessful, @error', array('@error' => $success)), 'error');
+  }
+}
+
+/**
+ * Form for making a deposit to the wallet, ie.: adding X amount of credit to the wallet balance
+ */
+function mp_wallet_deposit_form($form_state) {
+  $form = array();
+  $info = array(
+    'title' => t('Deposit credits to my wallet'),
+    'min' => variable_get('mp_wallet_min_deposit', FALSE),
+    'max' => variable_get('mp_wallet_max_deposit', FALSE),
+    'fees' => array(
+      'base' => variable_get('mp_wallet_deposit_fee_base', FALSE),
+      'percentage' => variable_get('mp_wallet_deposit_fee_percentage', FALSE),
+      'extra_text' => t('payment processor fees'),
+    ),
+    'type' => t('deposit'),
+  );
+  $form['info']['#value'] = theme('mp_wallet_form_info', $info);
+  $form['amount'] = array(
+    '#type' => 'textfield',
+    '#default_value' => isset($form_state['values']['amount']) ? $form_state['values']['amount'] : $_SESSION['amount'],
+    '#required' => TRUE,
+    '#suffix' => '<div class="amount-calculation"></div>',
+    '#field_suffix' => mp_wallet_credit_representation(2),
+    '#size' => 5,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Deposit'),
+  );
+
+  // Add AJAX setting + JS file to be able to inform the user on-the-fly about fees and other info about the planned transaction.
+  $settings['mpWallet']['convert'] = url('mp-wallet/calculate/deposit', array('absolute' => TRUE));
+  drupal_add_js($settings, 'setting');
+  drupal_add_js(drupal_get_path('module', 'mp_wallet') . '/mp_wallet.js');
+  return $form;
+}
+
+/**
+ * Validate handler for mp_wallet_deposit_form().
+ */
+function mp_wallet_deposit_form_validate($form, $form_state) {
+  $amount = $form_state['values']['amount'];
+  // Checks if the deposit in a sane range
+  $min = variable_get('mp_wallet_min_deposit', 5);
+  if ($amount < $min) {
+    form_set_error('amount', t('The minimum amount of a deposit is @amount', array('@amount' => $min)));
+  }
+  $max = variable_get('mp_wallet_max_deposit', 999);
+  if ($amount > $max) {
+    form_set_error('amount', t('The maximum amount of a deposit is @amount', array('@amount' => $max)));
+  }
+}
+
+/**
+ * Submit handler for mp_wallet_deposit_form().
+ */
+function mp_wallet_deposit_form_submit($form, $form_state) {
+  // start express checkout
+  $nvp_request = array(
+    'METHOD' => 'SetExpressCheckout',
+    'RETURNURL' => url('mp-wallet/deposit/complete', array('absolute' => TRUE)),
+    'CANCELURL' => url('mp-wallet/deposit', array('absolute' => TRUE)),
+    'AMT' => sprintf("%.2F", mp_wallet_convert_to_real($form_state['values']['amount'] + mp_wallet_get_fees($form_state['values']['amount'], 'deposit'))),
+    'CURRENCYCODE' => variable_get('uc_paypal_wpp_currency', 'USD'),
+    'PAYMENTACTION' => 'Sale',
+  );
+  $_SESSION['amount'] = $form_state['values']['amount'];
+  $nvp_request['NOSHIPPING'] = 1;
+  $nvp_response = uc_paypal_api_request($nvp_request, variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'));
+  if ($nvp_response['ACK'] != 'Success') {
+    drupal_set_message(t('Error message from PayPal:<br />@message', array('@message' => $nvp_response['L_LONGMESSAGE0'])), 'error');
+  }
+  else {
+
+    $_SESSION['TOKEN'] = $nvp_response['TOKEN'];
+
+    if (strpos(variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'), 'sandbox') > 0) {
+      $sandbox = 'sandbox.';
+    }
+    $_SESSION['TOKEN'] = $nvp_response['TOKEN'];
+    // At normal flow, the execution continues at mp_wallet_deposit().
+    header('Location: https://www.' . $sandbox . 'paypal.com/cgi-bin/webscr?cmd=_express-checkout&token=' . $_SESSION['TOKEN']);
+    exit();
+  }
+}
+
+/**
+ * PayPal Express Checkout deposit handler, receives the credentials from the API to launch the real transaction.
+ */
+function mp_wallet_deposit_finish() {
+  module_load_include('inc', 'mp_wallet', 'mp_wallet');
+  $commission = mp_wallet_get_fees($_SESSION['amount'], 'deposit');
+  $nvp_request = array(
+    'METHOD' => 'DoExpressCheckoutPayment',
+    'TOKEN' => $_GET['token'],
+    'PAYERID' => $_GET['PayerID'],
+    'PAYMENTACTION' => 'Sale',
+    'AMT' => sprintf("%.2F", mp_wallet_convert_to_real($_SESSION['amount'] + $commission)),
+    'CURRENCYCODE' => variable_get('uc_paypal_wpp_currency', 'USD'),
+  );
+
+  $nvp_response = uc_paypal_api_request($nvp_request, variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'));
+  if ($nvp_response['ACK'] == 'Success') {
+    global $user;
+    $success = mp_wallet_deposit($user, $_SESSION['amount'], 'paypal_' . $nvp_response['TRANSACTIONTYPE'], $nvp_response['TRANSACTIONID']);
+    if ($success === TRUE) {
+      mp_wallet_collect_commission($commission);
+      drupal_set_message(t('Added @amount !name to the wallet', array('@amount' => $_SESSION['amount'], '!name' => mp_wallet_credit_representation($_SESSION['amount']))));
+      unset($_SESSION['amount']);
+      drupal_goto('mp-wallet/summary');
+    }
+    else {
+      drupal_set_message(t('An error occurred while topping your balance, contact site team to apply your deposit to your balance. Sorry for our mistake!'));
+    }
+  }
+  else {
+    drupal_set_message(t('Error message from PayPal:<br />@message', array('@message' => $nvp_response['L_LONGMESSAGE0'])), 'error');
+    drupal_goto('mp-wallet/deposit');
+  }
+}
+
+/**
+ * Describes payment method data
+ * @see mp_wallet_payment_method()
+ */
+function mp_wallet_payment($op, $arg1) {
+  switch ($op) {
+    case 'order-view':
+    case 'customer-view':
+      return 'Marketplace Wallet';
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_order().
+ */
+function mp_wallet_order($op, &$arg1, $arg2) {
+  global $user;
+  switch ($op) {
+    case 'submit':
+      if ($arg1->payment_method == 'mp_wallet') {
+        module_load_include('inc', 'mp_wallet', 'mp_wallet');
+        $buyer = $user;
+        $status = mp_wallet_internal_transaction($buyer, $arg1);
+        if ($status !== TRUE) {
+          drupal_set_message(t('Error while wallet payment: @error', (array('@error' => $status))), 'warning');
+          drupal_goto('cart/checkout');
+        }
+        uc_payment_enter($arg1->order_id, 'mp_wallet', uc_order_get_total($arg1, FALSE), $arg1->uid, NULL, NULL);
+        uc_order_comment_save($arg1->order_id, 0, t('Payment is completed from the wallet.'), 'order', 'payment_received');
+      }
+      break;
+  }
+}
+

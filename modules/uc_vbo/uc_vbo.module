@@ -1,0 +1,57 @@
+<?php
+//$Id$
+
+/**
+ * @file
+ * The module file containing the code necessary to integrate Ubercart with Views Bulk Operations.
+ *
+ */
+
+/**
+ * Drupal Contributed Module Hooks
+ */
+/**
+ * Implementation of hook_views_bulk_operations_object_info().
+ */
+/*
+function uc_vbo_views_bulk_operations_object_info() {
+  return array(
+    'uc_order' => array(
+      'type' => 'uc_order',
+      'base_table' => 'uc_orders',
+      'load' => 'uc_vbo_order_load',
+      'normalize' => '_uc_vbo_views_bulk_operations_normalize_order_context',
+      'oid' => 'order_id',
+      'title' => 'title',
+    ),
+  );
+}
+
+function uc_vbo_order_load($oid) {
+  dsm($oid);
+  $order = uc_order_load($oid);
+  $order->title = t('Order ID: !oid', array('!oid' => $oid));
+  dpm($order);
+  return $order;
+}
+
+function _uc_vbo_views_bulk_operations_normalize_order_context($type, $order) {
+  dpm($type);
+  dpm($order);
+}
+*/
+function uc_vbo_action_info() {
+  return array(
+    'uc_vbo_process_order' => array(
+      'description' => t('Process order'),
+      'type' => 'order',
+//      'aggregate' => TRUE,
+    ),
+  );
+}
+
+function uc_vbo_process_order($order, $context=array()) {
+  dsm('uc_vbo_process_order');
+  dpm($order);
+  dpm($context);
+}

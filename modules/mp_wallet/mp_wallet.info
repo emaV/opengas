@@ -1,0 +1,15 @@
+; $Id: mp_wallet.info,v 1.1 2011/01/25 16:12:04 aronnovak Exp $
+name = Marketplace Wallet
+description = Provides one-click transactions inside the marketplace using virtual credit what is assigned to each user wallet.
+core=6.x
+dependencies[] = mp_products
+dependencies[] = uc_paypal
+package = Ubercart - Marketplace
+php=5.1
+
+; Information added by drupal.org packaging script on January 1, 1970 - 00:00
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "mp_wallet"
+datestamp = "1295972257"
+

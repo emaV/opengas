@@ -1,0 +1,152 @@
+<?php
+// $Id: mp_wallet.install,v 1.1 2011/01/25 16:12:04 aronnovak Exp $
+
+/**
+ * @file
+ * Database installation, uninstallation, and updates for the mp_wallet marketplace module.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function mp_wallet_schema() {
+  $schema = array();
+  $schema['mp_wallet_balances'] = array(
+    'description' => t('Credit balance per user.'),
+    'fields' => array(
+      'uid' => array(
+        'description' => t('User ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'balance' => array(
+        'description' => t('Current balance.'),
+        'type' => 'float',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0.0),
+    ),
+    'primary key' => array('uid'),
+  );
+  $schema['mp_wallet_ids'] = array(
+    'description' => t('Credit balance per user.'),
+    'fields' => array(
+      'uid' => array(
+        'description' => t('User ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      'type' => array(
+        'description' => t('Type (like paypal / amazon'),
+        'type' => 'varchar',
+        'length' => 20,
+        'default' => 'paypal',
+        'not null' => TRUE,
+      ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => 512,
+        'not null' => TRUE,
+        'default' => ''),
+    ),
+    'primary key' => array('uid', 'type'),
+  );
+  $schema['mp_wallet_transactions'] = array(
+    'description' => t('Transaction log of the wallet'),
+    'fields' => array(
+      'wtid' => array(
+        'description' => t('Wallet transaction ID'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'type' => array(
+        'description' => t('Type of transaction. Can be: sell, donation, withdraw, deposit'),
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => 'sell',
+      ),
+      'seller' => array(
+        'description' => t('Seller uid'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'buyer' => array(
+        'description' => t('Buyer uid'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'value_seller' => array(
+        'description' => t('Value of transaction in credit at seller'),
+        'type' => 'float',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'value_buyer' => array(
+        'description' => t('Value of transaction in credit at buyer'),
+        'type' => 'float',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'balance_seller' => array(
+        'description' => t('Seller\'s new balance after the transaction'),
+        'type' => 'float',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'balance_buyer' => array(
+        'description' => t('Buyer\'s new balance after the transaction'),
+        'type' => 'float',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'order_id' => array(
+        'description' => t('Übercart order id or empty if non applicable'),
+         'type' => 'int',
+         'unsigned' => TRUE),
+      'external_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE),
+      'external_transaction_type' => array(
+        'type' => 'varchar',
+        'length' => '20',
+        'not null' => FALSE),
+      'timestamp' => array(
+        'description' => t('Time of transaction'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+    ),
+    'primary key' => array('wtid'),
+    'indexes' => array(
+      'timestamp' => array('timestamp'),
+      'seller' => array('seller'),
+      'buyer' => array('buyer'),
+      'order_id' => array('order_id'),
+      'type' => array('type'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function mp_wallet_install() {
+  drupal_install_schema('mp_wallet');
+  // Switch to InnoDB to support transactions to be able handle credit flow between users in a solid way
+  db_query("ALTER TABLE {mp_wallet_balances} ENGINE = InnoDB");
+  db_query("ALTER TABLE {mp_wallet_transactions} ENGINE = InnoDB");
+
+  // Create a view for making report generation easy
+  // it can be problematic performance-wise, but generating reports is not such a frequent operation just like selling or other transactions
+  db_query('CREATE VIEW {mp_wallet_transactions_reporting} as SELECT *,  "total" AS total, date_format(FROM_UNIXTIME(timestamp), "%Y") AS year, date_format(FROM_UNIXTIME(timestamp), "%Y|%m") AS month, date_format(FROM_UNIXTIME(timestamp), "%Y|%m|%v") AS week, date_format(FROM_UNIXTIME(timestamp), "%Y|%m|%v|%d") AS day FROM {mp_wallet_transactions}');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function  mp_wallet_uninstall() {
+  db_query("DROP VIEW {mp_wallet_transactions_reporting}");
+  drupal_uninstall_schema('mp_wallet');
+}
+
