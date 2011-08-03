@@ -1,0 +1,168 @@
+diff --git a/views_bulk_operations.module b/views_bulk_operations.module
+old mode 100644
+new mode 100755
+index b690c75..e0a3826
+--- a/views_bulk_operations.module
++++ b/views_bulk_operations.module
+@@ -222,7 +222,8 @@ function views_node_selector_process($element, $edit) {
+ 
+   // Fix value.
+   if (!isset($element['#default_value'])) {
+-    $element['#default_value'] = array('selection' => array(), 'select_all' => FALSE);
++    $hide_select_col = (bool)$view->display[$view->current_display]->display_options['style_options']['hide_select_col'];
++    $element['#default_value'] = array('selection' => array(), 'select_all' => $hide_select_col);
+   }
+   $element['#default_value']['selection'] = array_intersect_key($options, (array)$element['#default_value']['selection']);
+ 
+@@ -290,7 +291,7 @@ function template_preprocess_views_bulk_operations_table(&$vars, $hook) {
+  */
+ function theme_views_node_selector($element) {
+   module_load_include('inc', 'views', 'theme/theme');
+-  
++
+   $output = '';
+   $view = $element['#view'];
+   $sets = $element['#sets'];
+@@ -321,18 +322,23 @@ function theme_views_node_selector($element) {
+ 
+     // Add checkboxes to the header and the rows.
+     $hide_select_all = @$view->display['default']->display_options['style_options']['hide_select_all'];
+-    if (!$hide_select_all) {
+-      $headers['select'] = theme('table_select_header_cell');
+-    }
+-    else {
+-      $headers['select'] = '';
++    $hide_select_col = @$view->display[$view->current_display]->display_options['style_options']['hide_select_col'];
++    if (!$hide_select_col) {
++      if (!$hide_select_all) {
++        $headers['select'] = theme('table_select_header_cell');
++      }
++      else {
++        $headers['select'] = '';
++      }
+     }
+     foreach ($vars['header'] as $field => $label) {
+       $headers[$field] = $label;
+     }
+     $rows = array();
+     foreach ($records as $num => $object) {
+-      $row['select'] =  theme('checkbox', $element['selection'][md5(serialize($object))]);
++      if (!$hide_select_col) {
++        $row['select'] =  theme('checkbox', $element['selection'][md5(serialize($object))]);
++      }
+       foreach ($vars['rows'][$num] as $field => $content) {
+         $row[$field] = $content;
+       }
+@@ -376,7 +382,9 @@ function views_bulk_operations_init() {
+  */
+ function views_bulk_operations_form($form_state, $plugin) {
+   $url = url($_GET['q']);
+-
++  if ($plugin) {
++    $hide_select_col = (bool)$view->display[$view->current_display]->display_options['style_options']['hide_select_col'];
++  }
+   // Erase the form parameters from $_REQUEST for a clean pager.
+   if (!empty($form_state['post'])) {
+     $_REQUEST = array_diff($_REQUEST, $form_state['post']);
+@@ -403,7 +411,7 @@ function views_bulk_operations_form($form_state, $plugin) {
+       // Avoid PHP warnings.
+       $_SESSION['vbo_values'][$url]['objects'] += array(
+         'selection' => array(),
+-        'select_all' => FALSE,
++        'select_all' => $hide_select_col,
+       );
+       $_SESSION['vbo_values'][$url] += array(
+         'operation' => NULL,
+@@ -425,7 +433,7 @@ function views_bulk_operations_form($form_state, $plugin) {
+       $default_operation = $_SESSION['vbo_values'][$url]['operation'];
+     }
+     else {
+-      $default_objects = array('selection' => NULL, 'select_all' => FALSE);
++      $default_objects = array('selection' => NULL, 'select_all' => $hide_select_col);
+       $default_operation = NULL;
+     }
+ 
+@@ -587,10 +595,15 @@ function views_bulk_operations_form($form_state, $plugin) {
+  */
+ function views_bulk_operations_form_validate($form, &$form_state) {
+   $url = url($_GET['q']);
++  $view = $form['#plugin']->view;
++  $hide_select_col = $view->display[$view->current_display]->display_options['style_options']['hide_select_col'];
+ 
++  if ($hide_select_col) {
++    $form_state['values']['objects']['select_all'] = 1;
++  }
+   switch ($form_state['values']['step']) {
+     case VIEWS_BULK_OPS_STEP_VIEW:
+-      if (!array_filter($form_state['values']['objects']['selection']) && empty($_SESSION['vbo_values'][$url]['objects']['selection'])) {
++      if (!$hide_select_col && !array_filter($form_state['values']['objects']['selection']) && empty($_SESSION['vbo_values'][$url]['objects']['selection'])) {
+         form_set_error('objects', t('No row selected. Please select one or more rows.'));
+       }
+       if (!empty($form_state['clicked_button']['#hash'])) {
+@@ -605,7 +618,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
+       break;
+ 
+     case VIEWS_BULK_OPS_STEP_SINGLE:
+-      if (!array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
++      if (!$hide_select_col && !array_filter($form_state['values']['objects']['selection'])) { // If all 0, no row selected
+         form_set_error('objects', t('No row selected. Please select one or more rows.'));
+       }
+       $plugin = $form['#plugin'];
+@@ -634,7 +647,7 @@ function views_bulk_operations_form_validate($form, &$form_state) {
+  */
+ function views_bulk_operations_form_submit($form, &$form_state) {
+   $plugin = $form['#plugin'];
+-  
++
+   switch ($form_state['values']['step']) {
+     case VIEWS_BULK_OPS_STEP_VIEW:
+       $form_state['storage']['step'] = $form_state['values']['step'];
+@@ -717,6 +730,7 @@ function views_bulk_operations_form_submit($form, &$form_state) {
+  */
+ function theme_views_bulk_operations_confirmation($objects, $view) {
+   $object_info = _views_bulk_operations_object_info_for_view($view);
++  $hide_select_col = $view->display[$view->current_display]->display_options['style_options']['hide_select_col'];
+   $items = array();
+   if ($objects['select_all']) {
+     $count = count($objects['selection']);
+diff --git a/views_bulk_operations.views_default.inc b/views_bulk_operations.views_default.inc
+old mode 100644
+new mode 100755
+index ecb680d..9f670a9
+--- a/views_bulk_operations.views_default.inc
++++ b/views_bulk_operations.views_default.inc
+@@ -261,6 +261,7 @@ function views_bulk_operations_views_default_views() {
+     'execution_type' => '1',
+     'display_type' => '0',
+     'hide_select_all' => 0,
++    'hide_select_col' => 0,
+     'display_result' => 1,
+     'merge_single_action' => 0,
+     'operations' => array(
+diff --git a/views_bulk_operations_plugin_style.inc b/views_bulk_operations_plugin_style.inc
+old mode 100644
+new mode 100755
+index 3dce2a4..7283eeb
+--- a/views_bulk_operations_plugin_style.inc
++++ b/views_bulk_operations_plugin_style.inc
+@@ -25,6 +25,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
+     $options['display_result'] = array('default' => TRUE);
+     $options['merge_single_action'] = array('default' => TRUE);
+     $options['hide_select_all'] = array('default' => FALSE);
++    $options['hide_select_col'] = array('default' => FALSE);
+ 
+     return $options; 
+   }
+@@ -63,6 +64,12 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
+       '#description' => t('Check this box to hide the "select all" checkbox and associated "select across all pages" button.'),
+       '#default_value' => $this->options['hide_select_all'],
+     );
++    $form['hide_select_col'] = array(
++      '#type' => 'checkbox',
++      '#title' => t('Hide select column.'),
++      '#description' => t('If chosen, selected actions will be performed on the entire found set by default.'),
++      '#default_value' => $this->options['hide_select_col'],
++    );
+     $form['display_result'] = array(
+       '#type' => 'checkbox',
+       '#title' => t('Display processing result'),
