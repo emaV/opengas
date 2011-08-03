@@ -214,7 +214,8 @@ function views_bulk_operations_form($form_state, $plugin) {
     $default_operation = $_SESSION['vbo_values'][$_GET['q']]['operation'];
   }
   else {
-    $default_objects = array('selection' => NULL, 'select_all' => FALSE);
+    $select_all_by_default = (bool)$plugin->options['select_all_by_default'];
+    $default_objects = array('selection' => NULL, 'select_all' => $select_all_by_default);
     $default_operation = NULL;
   }
 

@@ -145,5 +145,6 @@ function gas_rules_defaults() {
 function gas_views_api() {
   return array(
     'api' => '2',
+    'path' => drupal_get_path('module', 'gas'),
   );
 }

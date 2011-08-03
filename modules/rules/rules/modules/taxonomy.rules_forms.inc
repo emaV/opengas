@@ -176,6 +176,68 @@ function rules_action_taxonomy_add_vocab_submit(&$settings, $form, $form_state) 
 }
 
 /**
+ * Configure the vocabulary to expose and select the terms to look for.
+ */
+function rules_condition_node_has_term_form($settings, &$form) {
+  // Add two settings.
+  $settings += array('taxonomy_node_terms_are' => '', 'taxonomy_node_vocabularies' => array());
+
+  // If the vocabularies are not set, first display the list of vocabularies
+  // to narrow the list of terms to display.
+  if (empty($settings['taxonomy_node_vocabularies'])) {
+    $options = array();
+    foreach (taxonomy_get_vocabularies() as $voc) {
+      $options[$voc->vid] = $voc->name;
+    }
+    $form['settings']['taxonomy_node_vocabularies'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Select the vocabulary where the terms can belong.'),
+      '#options' => $options,
+      '#default_value' => $settings['taxonomy_node_vocabularies'],
+    );
+    // Hijack the submit callback to create a multistep form.
+    $form['submit']['#submit'] = array('rules_condition_node_has_term_set_vocabularies');
+    $form['submit']['#value'] = t('Continue');
+  }
+  else {
+    // If we have a vocabulary settled, display the terms of this vocabulary.
+    $options = array();
+    foreach($settings['taxonomy_node_vocabularies'] as $vid => $voc_name) {
+      if ($vid > 0) {
+        $tree = taxonomy_get_tree($vid);
+        $options[$voc_name] = array();
+        foreach($tree as $term) {
+          $options[$voc_name][$term->tid] = $term->name;
+        }
+      }
+    }
+    $form['settings']['taxonomy_node_terms_are'] = array(
+      '#type' => 'select',
+      '#multiple' => TRUE,
+      '#description' => t('Selecting multiple terms means that the node will have to be assigned every terms to be evaluated as true.'),
+      '#title' => t('Terms that the node should have.'),
+      '#options' => $options,
+      '#default_value' => $settings['taxonomy_node_terms_are'],
+    );
+  }
+}
+
+/**
+ * Reformat the value to store to be able to display the vocabulary name
+ * to the end user.
+ */
+function rules_condition_node_has_term_set_vocabularies($form, &$form_state) {
+  $save_voc = array();
+  foreach($form_state['values']['settings']['taxonomy_node_vocabularies'] as $voc) {
+    if ($voc != 0) {
+      $save_voc[$voc] = $form['settings']['taxonomy_node_vocabularies']['#options'][$voc];
+    }
+  }
+  // Store the value in the element key instead of values.
+  $form_state['element']['#settings']['taxonomy_node_vocabularies'] = $save_voc;
+}
+
+/**
  * Helper function; Return all existing vocabularies.
  */
 function _rules_action_taxonomy_get_vocab() {

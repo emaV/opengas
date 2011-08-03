@@ -62,7 +62,13 @@ class views_groupby_handler_field_groupfields extends views_handler_field {
     );
     
     
-    $options_sql_func = array( 'count' => t('Count') );
+    $options_sql_func = array(
+      'count' => t('Count'),
+      'min' => t('Min'),
+      'max' => t('Max'),
+      'sum' => t('Sum'),
+      'avg' => t('Avg'),
+    );
     $form['views_groupby_sql_function'] = array(
       '#title' => t('SQL Aggregation Function'),
       '#type' => 'select',
@@ -260,24 +266,34 @@ class views_groupby_handler_field_groupfields extends views_handler_field {
         $count++;
         $sz_to_group .= $field;
       }
-      $this->query->add_groupby($sz_to_group);    
+      $this->query->add_groupby($sz_to_group);
+      // http://drupal.org/node/651546#comment-2467362
+      if ($count) {
+        $this->query->distinct = TRUE;
+        $this->query->no_distinct = 'views_groupby';
+      }
     }
     
-    $views_fields = $this->_get_views_fields($just_aliases=TRUE);
+    $views_fields = $this->_get_views_fields($just_aliases = TRUE);
                 
     /** Add all other fields into count, to make sure they do not mess up group_by **/
     if (is_array($this->query->fields)) {
       foreach ($this->query->fields as $key => $field) {
-        if ( !in_array($key, $to_group) &&
-             !in_array($key, $to_aggregate) ) {
-
-             //if ($key != $bfield) {
-             // unset($this->query->fields[$key]);
-             //}             
-        } 
-        else if (in_array($key, $to_aggregate)) {
-            $this->query->fields[$key][$sql_func] = TRUE;
+        if (in_array($key, $to_aggregate)) {
+          if ($sql_func == 'count') {
+             $this->query->fields[$key][$sql_func] = TRUE;
+             $this->query->fields[$key]['alias'] = $key;
+          }
+          else {
+            // Build the formula using the table and field
+            $this->query->fields[$key]['field'] =
+              strtoupper($sql_func) . '(' . $this->query->fields[$key]['table'] .
+              '.' . $this->query->fields[$key]['field'] . ')';
+            // no table, it's a formula
+            $this->query->fields[$key]['table'] = NULL;
+            $this->query->fields[$key]['aggregate'] = TRUE;
             $this->query->fields[$key]['alias'] = $key;
+          }
         }
       }
     }

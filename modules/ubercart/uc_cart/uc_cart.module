@@ -1014,7 +1014,7 @@ function uc_cart_view_form_submit($form, &$form_state) {
   if (isset($_SESSION['cart_order'])) {
     unset($_SESSION['cart_order']);
   }
-
+dpm($form_state);
   // Update the items in the shopping cart based on the form values.
   uc_cart_update_item_object((object)$form_state['values']);
 
@@ -1043,6 +1043,7 @@ function uc_cart_view_form_submit($form, &$form_state) {
  * @see uc_cart_view_form()
  */
 function theme_uc_cart_view_form($form) {
+dpm($form);
   drupal_add_css(drupal_get_path('module', 'uc_cart') .'/uc_cart.css');
 
   $output = '<div id="cart-form-products">'
@@ -1467,7 +1468,7 @@ function uc_cart_get_item($cart_item_id) {
  * @return unknown_type
  */
 function uc_cart_update_item($item) {
-  db_query("UPDATE {uc_cart_products} SET qty = %d, changed = UNIX_TIMESTAMP(), data = '%s' WHERE cart_item_id = %d",
+  db_query("UPDATE {uc_cart_products} SET qty = %n, changed = UNIX_TIMESTAMP(), data = '%s' WHERE cart_item_id = %d",
     $item->qty, serialize($item->data), $item->cart_item_id);
 }
 
@@ -1531,7 +1532,7 @@ function uc_cart_add_item($nid, $qty = 1, $data = NULL, $cid = NULL, $msg = TRUE
 
   // If the item isn't in the cart yet, add it.
   if (is_null($item) || $item === FALSE) {
-    db_query("INSERT INTO {uc_cart_products} (cart_id, nid, qty, changed, data) VALUES ('%s', %d, %d, %d, '%s')", $cid, $node->nid, $qty, time(), serialize($data));
+    db_query("INSERT INTO {uc_cart_products} (cart_id, nid, qty, changed, data) VALUES ('%s', %d, %n, %d, '%s')", $cid, $node->nid, $qty, time(), serialize($data));
     if ($msg) {
       drupal_set_message(t('<strong>@product-title</strong> added to <a href="!url">your shopping cart</a>.', array('@product-title' => $node->title, '!url' => url('cart'))));
     }

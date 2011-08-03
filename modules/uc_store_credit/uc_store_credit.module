@@ -1,0 +1,530 @@
+<?php
+
+/**
+ * @file
+ * Allows customers to purchase or accumulate store credit and use that credit
+ *   to pay for products in the store.
+ *
+ * This module allows for other modules to define systems for tracking and
+ * managing store credit.
+ */
+
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function uc_store_credit_form_alter(&$form, &$form_state, $form_id) {
+  // If this is some sort of product node form...
+  if (substr($form_id, -10) == '_node_form' && in_array(substr($form_id, 0, strlen($form_id) - 10), module_invoke_all('product_types'))) {
+    // Add a store credit value textfield that will override any global fixed
+    // value or converted value from the product price.
+    $form['base']['store_credit_value'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Store credit value'),
+      '#description' => t('A fixed value entered here will override a node type value or converted price value for this product.'),
+      '#default_value' => $form['#node']->store_credit_value,
+      '#size' => 16,
+      '#weight' => $form['base']['prices']['#weight'] + 1,
+    );
+  }
+
+  // Add a validate handler to the checkout form.
+  if ($form_id == 'uc_cart_checkout_form') {
+    $form['#validate'][] = 'uc_store_credit_checkout_validate';
+
+    // Include the JS file that updates the payment method selection.
+    drupal_add_js(drupal_get_path('module', 'uc_store_credit') .'/uc_store_credit.js');
+
+    // Add some default JS variables.
+    drupal_add_js('uc_store_credit_hide_method = '. variable_get('uc_store_credit_hide_method', 0) .';', 'inline');
+    drupal_add_js('uc_store_credit_user_total = '. uc_store_credit_user_total() .';', 'inline');
+    drupal_add_js('uc_store_credit_cart_total = '. uc_store_credit_cart_total() .';', 'inline');
+    drupal_add_js('uc_store_credit_line_item_rate = '. variable_get('uc_store_credit_conversion_rate', 100) .';', 'inline');
+    drupal_add_js("uc_store_credit_subtotal_string = '". t('Subtotal') ."';", 'inline');
+
+    $set = FALSE;
+    foreach (array_keys($form['panes']['payment']['payment_method']['#options']) as $key) {
+      if ($key !== 'store_credit' && !$set) {
+        drupal_add_js("uc_store_credit_next_method = '". $key ."';", 'inline');
+        $set = TRUE;
+      }
+    }
+  }
+}
+
+// Validates the checkout form when the store credit payment method is selected.
+function uc_store_credit_checkout_validate($form, &$form_state) {
+  // If the customer chose store credit...
+  if ($form_state['values']['panes']['payment']['payment_method'] == 'store_credit') {
+    $order = uc_order_load($_SESSION['cart_order']);
+
+    // If they don't have enough store credit for this order...
+    if (uc_store_credit_order_total($order) > uc_store_credit_user_total()) {
+      // Display an error message.
+      form_set_error('payment_method', uc_store_credit_error_message());
+    }
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function uc_store_credit_nodeapi(&$node, $op, $arg = 0) {
+  switch ($op) {
+    case 'insert':
+    case 'update':
+      // Save the store credit value if this is a product node.
+      if (isset($node->store_credit_value)) {
+        // If a value was actually set...
+        if (!empty($node->store_credit_value)) {
+          // First attempt to update an existing value.
+          db_query("UPDATE {uc_store_credit_values} SET store_credit_value = %f WHERE nid = %d", $node->store_credit_value, $node->nid);
+
+          // If that failed, then insert a new value.
+          if (db_affected_rows() == 0) {
+            db_query("INSERT INTO {uc_store_credit_values} (nid, store_credit_value) VALUES (%d, %f)", $node->nid, $node->store_credit_value);
+          }
+        }
+        else {
+          // Otherwise, make sure no old value remains in the database.
+          db_query("DELETE FROM {uc_store_credit_values} WHERE nid = %d", $node->nid);
+        }
+      }
+
+      break;
+
+    case 'load':
+      $value = db_result(db_query("SELECT store_credit_value FROM {uc_store_credit_values} WHERE nid = %d", $node->nid));
+
+      // Add the fixed store credit value to the node object.
+      if ($value) {
+        $node->store_credit_value = $value;
+      }
+  }
+}
+
+/**
+ * Implementation of hook_payment_method().
+ */
+function uc_store_credit_payment_method() {
+  static $name_addendum = '';
+
+  // Add the number of points required on the checkout form.
+  if (arg(0) == 'cart' && arg(1) == 'checkout') {
+    $title_addendum = ':  '. t('!credit required, @user available', array('@user' => uc_store_credit_user_total(), '!credit' => '<span id="store-credit-total">'. uc_store_credit_cart_total() .'</span>', '@unit' => uc_store_credit_unit()));
+  }
+
+  // Add the number of points required on the review form.
+  if (arg(0) == 'cart' && arg(1) == 'checkout' && arg(2) == 'review' && empty($name_addendum)) {
+    // Set a temporary string to avoid infinite recursion.
+    $name_addendum = 'processing';
+
+    $order = uc_order_load($_SESSION['cart_order']);
+
+    $name_addendum = ' '. t('(!credit required)', array('!credit' => '<span id="store-credit-total">'. uc_store_credit_order_total($order) .'</span>'));
+  }
+
+  $name = arg(0) == 'admin' ? t('Store credit') : uc_store_credit_title();
+
+  $methods[] = array(
+    'id' => 'store_credit',
+    'name' => $name . $name_addendum,
+    'title' => uc_store_credit_title() . $title_addendum,
+    'desc' => t('Pay using store credit.'),
+    'callback' => 'uc_payment_method_store_credit',
+    'weight' => 2,
+    'checkout' => TRUE,
+    'no_gateway' => TRUE,
+  );
+
+  return $methods;
+}
+
+// Defines the store credit payment method.
+function uc_payment_method_store_credit($op, &$arg1) {
+  switch ($op) {
+    // Create a message to display in the payment details div of the payment
+    // checkout pane when the Store credit payment method is selected.
+    case 'cart-details':
+      $details = '';
+
+      // Get the appropriate value of the order in store credit.
+      if (!empty($_POST['payment-details-data'])) {
+        $total = $_POST['payment-details-data'];
+      }
+      else {
+        $total = uc_store_credit_cart_total();
+      }
+
+      // Display a failure message if the user does not have enough store credit
+      // to complete the order.
+      if ($total > uc_store_credit_user_total()) {
+        $details = uc_store_credit_error_message();
+      }
+
+      return $details;
+
+    case 'settings':
+      $form = array();
+
+      // Build the options array from all the available handlers.
+      $options = array();
+
+      foreach (uc_store_credit_handlers() as $callback => $title) {
+        // Make sure the callback exists before adding it to the array.
+        if (function_exists($callback)) {
+          $options[$callback] = $title;
+        }
+      }
+
+      // Display a warning message if no valid handlers were found.
+      if (empty($options)) {
+        $options['none'] = t('You must install a store credit handler module to use this payment method!');
+      }
+
+      $form['uc_store_credit_handler'] = array(
+        '#type' => 'radios',
+        '#title' => t('Store credit handler'),
+        '#description' => t('Choose the handler used to track and administer store credit.'),
+        '#options' => $options,
+        '#disabled' => array_shift(array_keys($options)) == 'none',
+        '#default_value' => variable_get('uc_store_credit_handler', ''),
+      );
+
+      $form['uc_store_credit_hide_method'] = array(
+        '#type' => 'radios',
+        '#title' => t('When the customer does not have enough store credit...'),
+        '#options' => array(
+          0 => t('Continue to display the store credit payment method like normal.'),
+          1 => t('Disable the store credit payment method but leave it visible.'),
+          2 => t('Disable and hide the store credit payment method.'),
+        ),
+        '#default_value' => variable_get('uc_store_credit_hide_method', 0),
+      );
+
+      $form['conversion'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Store credit conversion rates'),
+        '#description' => t('If fixed store credit values do not apply when calculating the store credit value of an order, these conversion rates will be used to get the value.'),
+      );
+
+      $form['conversion']['uc_store_credit_product_conversion_rate'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Product price conversion rate'),
+        '#description' => t('Conversion rate to use when calculating the value of products in store credit.'),
+        '#default_value' => variable_get('uc_store_credit_product_conversion_rate', 100),
+        '#size' => 16,
+        '#field_suffix' => t('units of store credit') .' = '. uc_currency_format(1),
+        '#required' => TRUE,
+      );
+
+      $form['conversion']['uc_store_credit_line_item_conversion_rate'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Line item conversion rate'),
+        '#description' => t('Conversion rate to use when calculating the value of order line items in store credit.'),
+        '#default_value' => variable_get('uc_store_credit_line_item_conversion_rate', 100),
+        '#size' => 16,
+        '#field_suffix' => t('units of store credit') .' = '. uc_currency_format(1),
+        '#required' => TRUE,
+      );
+
+      $form['branding'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Store credit branding'),
+        '#description' => t('These settings adjust the default branding of the store credit payment method.'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+
+      $form['branding']['uc_store_credit_title'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Store credit title'),
+        '#description' => t('Used to name the payment method during checkout.<br />Defaults to <em>Store credit</em>.'),
+        '#default_value' => variable_get('uc_store_credit_title', ''),
+      );
+
+      $form['branding']['uc_store_credit_unit'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Store credit unit'),
+        '#description' => t('Plural name of the unit used to measure store credit.<br />Defaults to <em>credit</em>.'),
+        '#default_value' => variable_get('uc_store_credit_unit', ''),
+      );
+
+      $form['branding']['uc_store_credit_error_message'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Store credit error message'),
+        '#description' => t('The error message used when someone tries to checkout without enough store credit to pay for the order.<br />Defaults to <em>!default</em>', array('!default' => t('You do not have enough store credit to pay for this order. Please choose a different payment method.'))),
+        '#default_value' => variable_get('uc_store_credit_error_message', ''),
+      );
+
+      $form['node_type_values'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Default node type fixed values'),
+        '#description' => t('When calculating the value of a product in store credit, the module will first check for a specific price on the product node.  If none is set, a fixed value entered below will be used.'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+
+      foreach (module_invoke_all('product_types') as $type) {
+        $form['node_type_values']['uc_store_credit_'. $type .'_value'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Fixed value for @type nodes', array('@type' => $type)),
+          '#default_value' => variable_get('uc_store_credit_'. $type .'_value', ''),
+          '#size' => 10,
+        );
+      }
+
+      return $form;
+  }
+}
+
+/**
+ * Implementation of hook_order().
+ */
+function uc_store_credit_order($op, &$arg1, $arg2) {
+  // Attempt to process the store credit payment during checkout.
+  if ($op == 'submit' && $arg1->payment_method == 'store_credit') {
+    $total = uc_store_credit_order_total($arg1);
+    $uid = $arg1->uid;
+dpm(array($op, $arg1, $arg2));
+    // Fail if the user doesn't have enough points.
+    if ($total > uc_store_credit_user_total($uid)) {
+      return array(array('pass' => FALSE, 'message' => uc_store_credit_error_message()));
+    }
+
+    // If the attempt to subtract the store credit fails...
+    if (!uc_store_credit_user_subtract($uid, $total)) {
+      // Return an error message and get outta here.
+      return array(array('pass' => FALSE, 'message' => t('There was a problem processing payment for your order.  Please try again or contact us if the problem persists.')));
+    }
+  }
+}
+
+// Returns an array of all available store credit handlers.
+function uc_store_credit_handlers() {
+  return module_invoke_all('uc_store_credit');
+}
+
+/**
+ * Returns the handler function used for performing store credit actions.
+ *
+ * @return
+ *   The handler function in a string or FALSE if none was found.
+ */
+function uc_store_credit_handler() {
+  // Get the default handler.
+  $callback = variable_get('uc_store_credit_handler', '');
+
+  // Check to make sure the callback exists.
+  if (!function_exists($callback)) {
+    drupal_set_message(t('No store credit handler has been set.'), 'error');
+    $callback = FALSE;
+  }
+
+  return $callback;
+}
+
+// Returns the title of the store credit payment method.
+function uc_store_credit_title() {
+  // Load the user defined store credit title if one was set.
+  $title = variable_get('uc_store_credit_title', '');
+
+  // Default to a translateable string if this has not been set.
+  if (empty($title)) {
+    $title = t('Store credit');
+  }
+
+  return $title;
+}
+
+// Returns the store credit unit name.
+function uc_store_credit_unit() {
+  // Load the user defined store credit unit if one was set.
+  $unit = variable_get('uc_store_credit_unit', '');
+
+  // Default to a translateable string if this has not been set.
+  if (empty($unit)) {
+    $unit = t('credit');
+  }
+
+  return $unit;
+}
+
+// Returns an error message used when someone tries to checkout without enough
+//   store credit to pay for the order.
+function uc_store_credit_error_message() {
+  // Load the user defined error message if one was set.
+  $message = variable_get('uc_store_credit_error_message', '');
+
+  // Default to a translatable string if this has not been set.
+  if (empty($message)) {
+    $message = t('You do not have enough store credit to pay for this order. Please choose a different payment method.');
+  }
+
+  return $message;
+}
+/**
+ * Returns a fixed store credit value for a product if one has been set.
+ *
+ * @param $item
+ *   An items object as returned by uc_cart_get_contents().
+ * @return
+ *   The fixed store credit value for the product if one has been set or FALSE.
+ */
+function uc_store_credit_fixed_value($item) {
+  // Find the current value for the node.
+  $result = db_query_range("SELECT n.type, store_credit_value FROM {node} AS n LEFT JOIN {uc_store_credit_values} AS sc ON n.nid = sc.nid WHERE n.nid = %d", $item->nid, 0, 1);
+
+  $data = db_fetch_array($result);
+
+  // Return the value if one was found...
+  if ($data['store_credit_value']) {
+    return $data['store_credit_value'];
+  }
+  else {
+    // Otherwise check for a node type specific value.
+    $value = variable_get('uc_store_credit_'. $data['type'] .'_value', FALSE);
+
+    // Return the value if one has been set...
+    if (!empty($value)) {
+      return $value;
+    }
+    else {
+      // Otherwise return FALSE.
+      return FALSE;
+    }
+  }
+}
+
+/**
+ * Returns the value of the shopping cart in terms of store credit.
+ *
+ * @param $items
+ *   If specified, an array of product items to evaluate; defaults to the
+ *     current user's shopping cart.
+ * @return
+ *   The value of the products.
+ */
+function uc_store_credit_cart_total($items = NULL) {
+  $rate = variable_get('uc_store_credit_product_conversion_rate', 100);
+  $subtotal = 0;
+
+  // Get the current user's shopping cart if no $items were specified.
+  if (empty($items)) {
+    $items = uc_cart_get_contents();
+  }
+
+  // Loop through all the products in the cart.
+  foreach ($items as $item) {
+    // If the product has been marked to have a fixed value in store credit...
+    if ($value = uc_store_credit_fixed_value($item)) {
+      // Add the value times the qty to the subtotal.
+      $subtotal += $value * $item->qty;
+    }
+    else {
+      // Otherwise use the conversion rate set in the store credit payment
+      // method settings.
+      $price_info = array(
+        'price' => $item->price,
+        'qty' => ($item->qty) ? $item->qty : 1,
+      );
+      $context = array(
+        'type' => 'cart_item',
+        'subject' => array(
+          'cart_item' => $item,
+          'node' => node_load($item->nid),
+        ),
+      );
+      $subtotal += uc_price($price_info, $context) * $rate;
+    }
+  }
+
+  return $subtotal;
+}
+
+/**
+ * Returns the current value of an order in terms of store credit.
+ *
+ * @param $order
+ *   The order object to evaluate.
+ * @return
+ *   The value of the order.
+ */
+function uc_store_credit_order_total($order) {
+  $rate = variable_get('uc_store_credit_line_item_conversion_rate', 100);
+
+  // First get the value of the products on the order.
+  $subtotal = uc_store_credit_cart_total($order->products);
+
+  // Loop through the line items on the order.
+  foreach ($order->line_items as $line) {
+    // If the line item is supposed to be calculated in the order total...
+    if (_line_item_data($line['type'], 'calculated')) {
+      // Add its converted value to the running total.
+      $subtotal += $line['amount'] * $rate;
+    }
+  }
+
+  return $subtotal;
+}
+
+/**
+ * Returns the total store credit available to a user.
+ *
+ * @param $uid
+ *   The user ID whose store credit you want to retrieve; uses the current user
+ *     if left NULL.
+ * @return
+ *   The store credit available to the specified user.
+ */
+function uc_store_credit_user_total($uid = NULL) {
+  // Check to make sure we have a valid handler.
+  if (!$function = uc_store_credit_handler()) {
+    return FALSE;
+  }
+
+  if (is_null($uid)) {
+    $uid = $GLOBALS['user']->uid;
+  }
+
+  return $function('user_total', $uid);
+}
+
+/**
+ * Attempts to subtract store credit from a user account.
+ *
+ * @param $uid
+ *   The user whose store credit we're affecting.
+ * @param $total
+ *   The total amount to subtract from the user's credit.
+ * @return
+ *   TRUE or FALSE indicating the success of the operation.
+ */
+function uc_store_credit_user_subtract($uid, $total) {
+  // Check to make sure we have a valid handler.
+  if (!$function = uc_store_credit_handler()) {
+    return FALSE;
+  }
+
+  return $function('subtract', $uid, $total);
+}
+
+/**
+ * Attempts to add store credit to a user account.
+ *
+ * @param $uid
+ *   The user whose store credit we're affecting.
+ * @param $total
+ *   The total amount to add to the user's credit.
+ * @return
+ *   TRUE or FALSE indicating the success of the operation.
+ */
+function uc_store_credit_user_add($uid, $total) {
+  // Check to make sure we have a valid handler.
+  if (!$function = uc_store_credit_handler()) {
+    return FALSE;
+  }
+
+  return $function('add', $uid, $total);
+}
+

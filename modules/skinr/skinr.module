@@ -699,3 +699,19 @@ function skinr_handler($type, $op, $handler, &$a3, $a4 = NULL, $a5 = NULL, $a6 =
     }
   }
 }
+
+/**
+ * Implementation of hook_ctools_plugin_directory() to let the system know
+ * we implement panels plugins.
+ */
+function skinr_ctools_plugin_directory($module, $plugin) {
+  // Safety: go away if CTools is not at an appropriate version.
+  if (!module_invoke('ctools', 'api_version', PANELS_REQUIRED_CTOOLS_API)) {
+    return;
+  }
+  if ($module == 'panels') {
+    return 'modules/panels';
+  }
+}
+
+

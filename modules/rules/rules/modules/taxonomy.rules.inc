@@ -10,6 +10,22 @@
  */
 
 /**
+ * Implements hook_rules_condition_info().
+ */
+function taxonomy_rules_condition_info() {
+  return array(
+    'rules_condition_node_has_term' => array(
+      'label' => t('A node has specific term(s).'),
+      'arguments' => array(
+        'node' => array('type' => 'node', 'description' => t('The node to check')),
+      ),
+      'eval input' => array('taxonomy_node_terms_are', 'taxonomy_node_vocabularies'),
+      'module' => t('Taxonomy'),
+    ),
+  );
+}
+
+/**
  * Implementation of hook_rules_event_info().
  */
 function taxonomy_rules_event_info() {
@@ -246,6 +262,34 @@ function taxonomy_rules_data_type_info() {
       'token type' => FALSE,
     ),
   );
+}
+
+/**
+ * Condition: Check if a term is present in the node taxonomy.
+ */
+function rules_condition_node_has_term(&$node, $settings, $element) {
+  if (count($node->taxonomy) > 0) {
+    foreach($settings['taxonomy_node_terms_are'] as $term) {
+      $match = FALSE;
+      foreach($node->taxonomy as $node_term) {
+        // $node_term could be an object or a string
+        $tax_tid = isset($node_term->tid) ? $node_term->tid : $node_term;
+        if ($tax_tid == $term) {
+          $match = TRUE;
+        }
+        else {
+          $match = $match || FALSE;
+        }
+      }
+      if (!$match) {
+        return FALSE;
+      }
+    }
+    return $match;
+  }
+  else {
+    return FALSE;
+  }
 }
 
 /**

@@ -15,6 +15,7 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
     $options['display_result'] = array('default' => TRUE);
     $options['merge_single_action'] = array('default' => TRUE);
     $options['hide_select_all'] = array('default' => FALSE);
+    $options['select_all_by_default'] = array('default' => FALSE);
 
     // Per-action settings.
     $this->populate_operations();
@@ -61,6 +62,12 @@ class views_bulk_operations_plugin_style extends views_plugin_style_table {
       '#title' => t('Hide select all checkbox'),
       '#description' => t('Check this box to hide the "select all" checkbox and associated "select across all pages" button.'),
       '#default_value' => $this->options['hide_select_all'],
+    );
+    $form['select_all_by_default'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Select all by default'),
+      '#description' => t('Check this box to have the "select all" checkbox selected by default (this still obeys the session settings).'),
+      '#default_value' => $this->options['select_all_by_default'],
     );
     $form['skip_confirmation'] = array(
       '#type' => 'checkbox',

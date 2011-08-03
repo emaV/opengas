@@ -222,7 +222,18 @@ function template_preprocess_views_view_fields(&$vars) {
  */
 function theme_views_view_field($view, $field, $row) {
   // Reference safe for PHP 4:
-  return $view->field[$field->options['id']]->advanced_render($row);
+//dpm(array('v>f' => $view->field, 'f>o' => $field->options));
+//dpm($row);
+  if(is_object($view->field[$field->options['id']])) {
+    return $view->field[$field->options['id']]->advanced_render($row);
+  }
+  else {
+//    dpm(debug_backtrace());
+//    dpm(array('v>f' => $view->field, 'f>o' => $field->options));
+    $z['v>f'] = array_keys($view->field);
+    $z['f>o'] = $field->options;
+    return "field: " .$field->options['id'] . " not an object - " . print_r($z, TRUE);
+  }
 }
 
 /**

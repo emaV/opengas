@@ -78,7 +78,7 @@ class views_crosstab_table extends views_plugin_style_table {
   function options_validate(&$form, &$form_state) {
     parent::options_validate($form, $form_state);
 
-     
+    $options =  views_crosstab_field_options();
     foreach ($options as $option => $option_name) {
       foreach ($options as $optiontest => $optiontest_name) {
         if ($option == $optiontest) {
@@ -150,8 +150,12 @@ class views_crosstab_table extends views_plugin_style_table {
     $crosstab_columns_query->add_groupby($crosstab_columns['alias']);
     $crosstab_columns_query->orderby = array();
     $query = $crosstab_columns_query->query();
+    $query_args = $crosstab_columns_query->get_where_args();
     // Run the query and collate the results.
-    $results = db_query($query);
+    $results = db_query($query, $query_args);
+
+//dpm($crosstab_columns_query); 
+//dpm($crosstab_columns); dsm($query);
 
     // Crosstab COUNT is really a SUM of 1s.
     if ($options['crosstab_operation'] == 'COUNT') {
@@ -161,27 +165,59 @@ class views_crosstab_table extends views_plugin_style_table {
     else {
       $data = $crosstab_data['table'] . '.' . $crosstab_data['field'];
     }
+//dpm($this->view->query->fields); dpm($this->view->style_plugin->options);
+//$this->view->field[$field->options['id']]->advanced_render($row);
+//dpm($crosstab_columns); 
+//dpm($this->view->display_handler->handlers['field']);
+///dpm($this->view->display_handler->handlers['field'][$crosstab_columns['field']]);
+//dpm($this->view->query->fields);
+
+    // Get field object
+    $crosstab_colum_field = $this->view->display_handler->handlers['field'][$crosstab_columns['field']];
+//dpm($crosstab_colum_field);
 
     // Loop through the columns, adding to the query and the view.
     while ($result = db_fetch_object($results)) {
+//dpm($result);
+      // simulate row rendering to get substitution tokens for crosstab column label
+      foreach($crosstab_columns_query->fields as $field_alias => $field) {
+//dsm("F: $field_alias : " . $field['field']); 
+// dpm($field);
+        $field_handler = $this->view->display_handler->handlers['field'][$field['field']];
+        if(is_object($field_handler)) {
+          $field_handler->advanced_render($result);
+//dsm("==== LR: " . $field_handler->last_render);
+        }
+//dpm($field_handler);
+//->advanced_render($result);
+//dsm("LR: " . $this->view->display_handler->handlers['field'][$field['field']]->last_render);
+      }
+      $crosstab_column_label = $crosstab_colum_field->advanced_render($result);
+
+      // Keep only alphanumeric (numbers too, because crosstab could be on nid or uid)
       $crosstab_column = $result->$crosstab_columns['alias'];
-      $alias = $crosstab_columns['alias'] . '_' . strtolower(preg_replace('/[^A-Za-z_-]+/', '_', $crosstab_column));
+      $alias = $crosstab_columns['alias'] . '_' . strtolower(preg_replace('/[^0-9A-Za-z]+/', '_', $crosstab_column));
+
       // Add the new field to the query, basing it on the original data query field.
       $this->view->query->add_field(NULL, $options['crosstab_operation'] . '(IF(' . $crosstab_columns['table'] . '.' . $crosstab_columns['field'] . ' = "' . $crosstab_column . '", ' . $data . ', 0))', $alias);
       $this->view->query->fields[$alias]['aggregate'] = TRUE;
       
       // Add the field to the view, basing it on the data view field.
       $this->view->field[$alias] = drupal_clone($this->view->field[$crosstab_data['field']]);
+
       // Set the alias, label and remove the table association (since it is aggregate).
       $this->view->field[$alias]->field_alias = $alias;
-      $this->view->field[$alias]->options['label'] = $crosstab_column;
+      $this->view->field[$alias]->options['label'] = $crosstab_column_label ? $crosstab_column_label : $crosstab_column;
+      $this->view->field[$alias]->options['id'] = $alias;
       unset($this->view->field[$alias]->table_alias);
       
       // Add the field to the current style_plugin, so we can sort with it.
       $this->view->style_plugin->options['info'][$alias] = $this->view->style_options['info'][$crosstab_data['field']];
       $this->view->style_plugin->options['columns'][$alias] = $alias;
+//dpm($this->view->field[$alias]);
+//$field->options['id']
     }
-
+/*
     // Add a "Total" column.
     // TODO: Add an option for this.
     $alias = $crosstab_columns['alias'] . '_total';
@@ -192,7 +228,7 @@ class views_crosstab_table extends views_plugin_style_table {
     $this->view->field[$alias]->options['label'] = t('Total');
     $this->view->style_plugin->options['info'][$alias] = $this->view->style_options['info'][$crosstab_data['field']];
     $this->view->style_plugin->options['columns'][$alias] = $alias;
-
+*/
     // Remove the source header and data source fields, since they have now
     // been replaced by the crosstab.
     unset($this->view->field[$crosstab_data['field']]);
@@ -204,9 +240,10 @@ class views_crosstab_table extends views_plugin_style_table {
     
     // Rebuild the sort, so that column sorts will be added by the new fields.
     $this->view->style_plugin->build_sort();
-
+//dpm($this->view); dpm($crosstab_rows);
     // Add a group by for the crosstab row grouping field.
     // This has to come after the build_sort, or it tries to add groups.
-    $this->view->query->add_groupby($crosstab_rows['field']);
+    $this->view->query->add_groupby($crosstab_rows['alias']);
+//dpm($this->view->field['node_type_product']);
   }
 }

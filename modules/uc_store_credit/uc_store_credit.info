@@ -1,0 +1,14 @@
+name = Store Credit
+description = Allows customers to purchase or accumulate store credit and use that credit to pay for products in the store.
+dependencies[] = uc_cart
+dependencies[] = uc_payment
+dependencies[] = uc_credit
+package = Ubercart - payment
+core = 6.x
+
+; Information added by drupal.org packaging script on 2011-02-25
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "uc_store_credit"
+datestamp = "1298620529"
+

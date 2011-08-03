@@ -26,3 +26,764 @@ function gas_og_create_links($group) {
 }
 
 include_once('gas.features.inc');
+
+function gas_theme() {
+  $themes = array(
+    'gas_catalog_form' => array(
+      'arguments' => array('form'),
+      'function' => 'theme_gas_catalog_form',
+    ),
+    'gas_conti_form' => array(
+      'arguments' => array('form'),
+      'function' => 'theme_gas_conti_form',
+    ),
+    'gas_ordini_form' => array(
+      'arguments' => array('form'),
+      'function' => 'theme_gas_ordini_form',
+    ),
+  );
+  return( $themes );
+}
+
+/**
+ * Get ordini form
+ */
+function gas_ordini_form(&$form_state, $vars) {
+
+  // initialize data
+  $view = $vars['view'];
+  $result = $view->result;
+  $nid_listino = $vars['view']->args[0];
+  $rows = $vars['rows'];
+  $form = array();
+  $form['#gas']['header'] = array(array('data' => t('Product'), 'class' => 'product'));
+  $form['#gas']['footer'] = array(array('data' => t('Total'), 'class' => 'tot'));
+  $form['items'] = array('#tree' => TRUE);
+  $form['#gas']['orders'] = array();
+  $form['#gas']['products'] = array();
+  $form['#gas']['cart'] = array();
+
+  // get order data
+//dpm($rows);
+//dpm($result);
+//return $form;
+
+  foreach($result as $id => $res) {
+    if($res->uc_cart_products_cart_id) {
+      $row = $rows[$id];
+//    dpm($row);
+      $order_id = $res->uc_orders_order_id;
+      if($order_id) {
+        $form['#gas']['orders'][$order_id] = array(
+          'uid' => $res->uc_orders_uid,
+          'username' => $row['cart_id'],
+          'total' => $res->uc_orders_order_total,
+          'total_themed' => $row['order_total'],
+          'cart' => $res->uc_orders_uid . '-' . $nid_listino,
+        );
+        $form['#gas']['products'][$res->nid][$order_id] = $res->uc_order_products_qty;
+        $form['items'][$res->node_nid][$order_id] = array(
+          '#type' => 'textfield',
+          '#size' => 4,
+          '#default_value' => $res->uc_order_products_qty,
+          '#attributes' => array('class' => 'order order-' . $order_id . ' user user-' . $res->uc_orders_uid),
+        );
+      }
+      $form['items'][$res->node_nid]['product'] = array(
+        '#value' => $res->node_title,
+        '#attributes' => array('class' => 'product'),
+      );
+      if($res->uc_cart_products_cart_id) {
+        $form['#gas']['cart'][$res->node_nid][$res->uc_cart_products_cart_id] = $res->uc_cart_products_qty;
+      }
+    }
+  }
+  foreach($form['#gas']['orders'] as $order_id => $order) {
+    foreach(element_children($form['items']) as $nid) {
+      if(!isset($form['items'][$nid][$order_id])) {
+        $form['items'][$nid][$order_id] = array(
+          '#type' => 'textfield',
+          '#size' => 4,
+          '#default_value' => 0,
+          '#attributes' => array('class' => 'order order-' . $order_id . ' user user-' . $order['uid']),
+        );
+      }
+      if(isset($form['#gas']['cart'][$nid][$order['cart']])) {
+        $cart_qty = $form['#gas']['cart'][$nid][$order['cart']];
+        $cart_qty_themed = ' <span class="cart">(' . $cart_qty . ')</span>';
+      }
+      else {
+        $cart_qty = 0;
+        $cart_qty_themed = ' <span class="cart empty">(0)</span>';
+      }
+
+      $form['items'][$nid][$order_id]['#cart_value'] = $cart_qty;
+      $form['items'][$nid][$order_id]['#suffix'] = $cart_qty_themed;
+      $total = isset($form['#gas']['products'][$nid]) ? array_sum($form['#gas']['products'][$nid]) : 0;
+      $form['items'][$nid]['tot'] = array(
+        '#value' => $total,
+        '#attributes' => array('class' => 'tot'),
+      );
+    }
+    $grand_total += $order['total'];
+    $class = 'order order-' . $order_id . ' user user-' . $order['uid'];
+    $form['#gas']['header'][] = array('data' => $order['username'], 'class' => $class);
+    $form['#gas']['footer'][] = array('data' => $order['total_themed'], 'class' => 'tot ' . $class);
+  }
+  $grand_total_themed = uc_price($grand_total, array());
+  $form['#gas']['header'][] = array('data' => t('Total'), 'class' => 'tot');
+  $form['#gas']['footer'][] = array('data' => $grand_total_themed, 'class' => 'tot grand-total');
+
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#submit' => array('gas_ordini_form_submit'),
+  );
+/*
+  $form['close'] = array(
+    '#type' => 'submit',
+    '#value' => t('Close'),
+    '#submit' => array('gas_ordini_form_submit'),
+  );
+*/
+//dpm($form);
+  return $form;
+}
+
+function theme_gas_ordini_form($form) {
+//dpm($form);
+
+  drupal_add_js(drupal_get_path('module', 'gas') . '/gas_conti.js');
+
+  // set header
+  $header = $form['#gas']['header'];
+  $footer = $form['#gas']['footer'];
+  $orders = $form['#gas']['orders'];
+  $cart = $form['#gas']['cart'];
+//  unset($form['#gas']);
+
+  foreach(element_children($form['items']) as $nid) {
+    $row = array();
+
+    // product
+    $row[] = array(
+      'data' => drupal_render($form['items'][$nid]['product']),
+      'class' => $form['items'][$nid]['product']['#attributes']['class'],
+    );
+
+    // orders
+    foreach($orders as $order_id => $order) {
+/*
+      if($form['items'][$nid][$order_id]['#cart_value']) {
+        $cart_themed = ' <span class="cart">(' . $form['items'][$nid][$order_id]['#cart_value'] . ')</span>';
+      }
+      else {
+        $cart_themed = ' <span class="cart empty">(0)</span>';
+      }
+*/
+      $row[] = array(
+         'data' => drupal_render($form['items'][$nid][$order_id]),
+         'class' => $form['items'][$nid][$order_id]['#attributes']['class'],
+      );
+    }
+
+    // tot
+    $cart_total = array_sum($cart[$nid]);
+    $cart_total_themed = ' <span class="tot cart">(' . $cart_total . ')</span>';
+    $row[] = array(
+      'data' => drupal_render($form['items'][$nid]['tot']) . $cart_total_themed,
+      'class' => $form['items'][$nid]['tot']['#attributes']['class'],
+    );
+
+    $rows[] = array('data' => $row);
+  }
+  $rows[] = $footer;
+
+  $out = theme('table', $header, $rows, array('class' => 'conti'));
+//dpm($form);
+  $out .= drupal_render($form);
+  return $out;
+}
+
+function gas_ordini_form_submit($form, &$form_state) {
+
+  $orders = $form['#gas']['orders'];
+//dpm($form);
+//dpm($form_state);
+
+  switch ($form_state['values']['op']) {
+
+    // Update cart button.
+    case t('Save'):
+
+      foreach($orders as $order_id => $order) {
+        $order_stored = uc_order_load($order_id);
+        foreach($order_stored->products as $key => $product) {
+          $order['products'][$product->nid] = $product;
+          $order['products'][$product->nid]->key = $key;
+        }
+//dpm($order);
+        foreach($form_state['values']['items'] as $nid => $items) {
+          // reload order before CRUD
+          $order_stored = uc_order_load($order_id);
+//dsm("ORDER: $order_id - NID: $nid - ORIG:" . $order['products'][$nid]->qty . " MOD: " . $items[$order_id]);
+          if($items[$order_id] > 0) {
+            if(isset($order['products'][$nid])) {
+//              dsm('UPDATE');
+              $key = $order['products'][$nid]->key;
+              $order_stored->products[$key]->qty = $items[$order_id];
+              uc_order_save($order_stored);
+            }
+            else {
+//              dsm('ADD');
+              // set product object
+              $product = node_load($nid);
+              $product->qty = $items[$order_id];
+              $product->price = $product->sell_price;
+              $product->data = module_invoke_all('add_to_cart_data', $form_state['values']);
+
+              foreach (module_list() as $module) {
+                $function = $module .'_cart_item';        if (function_exists($function)) {
+                  // $product must be passed by reference.
+                  $function('load', $product);
+                }
+              }
+
+              $price_info = array(
+                'price' => $product->price,
+                'qty' => 1,
+              );
+              $context = array(
+                'revision' => 'original',
+                'type' => 'order_product',
+                'subject' => array(
+                  'order' => $order_stored,
+                  'product' => $product,
+                  'node' => clone $product,
+                ),
+              );
+              $product->price = uc_price($price_info, $context);
+
+              drupal_alter('order_product', $product, $order);
+              uc_order_product_save($order_id, $product);
+
+            }
+          }
+          else {
+            if(isset($order['products'][$nid])) {
+//              dsm('DELETE');
+              db_query("DELETE FROM {uc_order_products} WHERE nid = %d", $nid);
+
+
+            }
+            else {
+//              dsm('NOTHING');
+            }
+          }
+        }
+      }
+      $order_stored = uc_order_load($order_id);
+//dpm($order_stored);
+/*
+      // add items from values
+      foreach($form_state['values']['items'] as $nid => $items) {
+        foreach($items as $cid => $qty) {
+          $item['nid'] = $nid;
+          $item['qty'] = $qty;
+          $data = module_invoke_all('add_to_cart_data', $item, NULL, NULL);
+          $data['module'] = 'uc_product';
+          if($item['qty'] > 0) {
+            uc_cart_add_item($item['nid'], $item['qty'], $data, $cid, FALSE);
+          }
+        }
+      }
+
+      // rebuild carts
+      foreach($cids as $cid) {
+        uc_cart_get_contents($cid, 'rebuild');
+      }
+*/
+      break;
+
+    case t('Close'):
+      dsm('Review');
+      break;
+  }
+}
+
+
+/**
+ * Get conti form
+ */
+function gas_conti_form(&$form_state, $vars) {
+
+  // initialize data
+  $nid_listino = $vars['view']->args[0];
+  $form = array();
+  $form['#header'] = array(array('data' => t('Product'), 'class' => 'product'));
+  $form['#totals'] = array(array('data' => t('Total'), 'class' => 'tot'));
+
+  // get cart data
+  $query = "SELECT distinct(cart_id)  FROM {uc_cart_products} WHERE cart_id LIKE '%%-%s'";
+  $result = db_query($query, $nid_listino);
+  $cart_qty = array();
+  $users = array();
+  $cids = array();
+  $uids = array();
+  $totals = array();
+
+  while($cid = db_result($result)) {
+    list($uid, $nid) = explode('-', $cid);
+    $user = user_load($uid);
+//    $users[$uid] = $user->name;
+    $cids[] = $cid;
+    $uids[] = $uid;
+    $totals[$uid] = 0;
+    $form['#header'][] = array('data' => $user->name, 'class' => 'user user-' . $uid, 'id' => 'user-' . $uid);
+    // get products from cart
+    $products = uc_cart_get_contents($cid);
+    foreach($products as $item) {
+      $cart[$item->nid][$cid] = $item->qty;
+    }
+  }
+  $form['#header'][] = array('data' => t('Totals'), 'class' => 'tot');
+//  $form['#users'] = $users;
+//  array_unshift($form['#header'], t('Prodotto'));
+
+  // get data from view
+  $view_results = $vars['view']->result;
+  $view_rows = $vars['rows'];
+
+  $form['items'] = array(
+    '#tree' => TRUE,
+  );
+
+  // get nid from result
+  $product_nids = array();
+
+  foreach($view_results as $row => $result) {
+
+    // set values
+    $vrow = $view_rows[$row];
+    $product_tot = 0;
+
+    $form['items'][$result->nid] = array(
+      'product' => array('#value' => $vrow['title']),
+    );
+    foreach($uids as $uid) {
+      $cid = $uid . '-' . $nid_listino;
+      $qty = isset($cart[$result->nid][$cid]) ? $cart[$result->nid][$cid] : 0;
+      $form['items'][$result->nid][$cid] = array(
+        '#type' => 'textfield',
+        '#size' => 4,
+        '#default_value' => $qty,
+        '#attributes' => array('class' => 'user user-' . $uid),
+      );
+      $product_tot += $qty;
+      $totals[$uid] += $qty;
+    }
+    $form['items'][$result->nid]['tot'] = array(
+      '#value' => $product_tot,
+      '#attributes' => array('class' => 'tot'),
+    );
+  }
+
+  // set totals
+  foreach($totals as $uid => $tot) {
+    $form['#totals'][] = array('data' => $tot, 'class' => 'user user-' . $uid, 'id' => 'user-' . $uid);
+  }
+  $form['cids'] = array(
+    '#type' => 'value',
+    '#value' => serialize($cids),
+  );
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#submit' => array('gas_conti_form_submit'),
+  );
+/*
+  $form['close'] = array(
+    '#type' => 'submit',
+    '#value' => t('Close'),
+    '#submit' => array('gas_conti_form_submit'),
+  );
+*/
+  return $form;
+}
+
+
+function theme_gas_conti_form($form) {
+//dpm($form);
+
+  drupal_add_js(drupal_get_path('module', 'gas') . '/gas_conti.js');
+
+  $header = $form['#header'];
+  unset($form['#header']);
+  $rows = array();
+  foreach(element_children($form['items']) as $id) {
+    $row = array();
+    foreach(element_children($form['items'][$id]) as $rid) {
+      $class = isset($form['items'][$id][$rid]['#attributes']['class']) ? $form['items'][$id][$rid]['#attributes']['class'] : 'product';
+      $row[] = array('data' => drupal_render($form['items'][$id][$rid]), 'class' => $class);
+    }
+    $class = ($form['items'][$id]['tot']['#value']) ? 'not-empty' : 'empty';
+    $rows[] = array('data' => $row, 'class' => $class);
+  }
+  $rows[] = $form['#totals'];
+  unset($form['#totals']);
+
+  $out = theme('table', $header, $rows, array('id' => 'conti', 'class' => 'conti'));
+  $out .= drupal_render($form);
+  return $out;
+}
+
+function gas_conti_form_submit($form, &$form_state) {
+
+  // get cids from values
+  $cids = unserialize($form_state['values']['cids']);
+
+  switch ($form_state['values']['op']) {
+
+    // Update cart button.
+    case t('Save'):
+      // empty carts
+      foreach($cids as $cid) {
+        uc_cart_empty($cid);
+      }
+
+      // add items from values
+      foreach($form_state['values']['items'] as $nid => $items) {
+        foreach($items as $cid => $qty) {
+          $item['nid'] = $nid;
+          $item['qty'] = $qty;
+          $data = module_invoke_all('add_to_cart_data', $item, NULL, NULL);
+          $data['module'] = 'uc_product';
+          if($item['qty'] > 0) {
+            uc_cart_add_item($item['nid'], $item['qty'], $data, $cid, FALSE);
+          }
+        }
+      }
+
+      // rebuild carts
+      foreach($cids as $cid) {
+        uc_cart_get_contents($cid, 'rebuild');
+      }
+      break;
+/*
+    case t('Close'):
+      dsm('Review');
+      break;
+*/
+  }
+}
+
+/**
+ * Get catalog form
+ */
+function gas_catalog_form(&$form_state, $vars) {
+
+  // get cart id
+  global $user;
+  $cart_id = $user->uid . '-' . $vars['view']->args[0];
+
+  //listino status
+  $node = node_load($vars['view']->args[0]);
+  $status_taxonomy = $node->taxonomy['12']->name;
+  $order_status = ($status_taxonomy == 'Aperto');
+
+  // get data from cart
+  $items = uc_cart_get_contents($cart_id);
+  $products = array();
+  $subtotal = 0;
+
+  // Loop through all the products in the cart.
+  foreach ($items as $item) {
+    // If the product has been marked to have a fixed value in store credit...
+    if ($value = uc_store_credit_fixed_value($item)) {
+      // Add the value times the qty to the subtotal.
+      $subtotal += $value * $item->qty;
+    }
+    else {
+      // Otherwise use the conversion rate set in the store credit payment
+      // method settings.
+      $price_info = array(
+        'price' => $item->price,
+        'qty' => ($item->qty) ? $item->qty : 1,
+      );
+      $context = array(
+        'type' => 'cart_item',
+        'subject' => array(
+          'cart_item' => $item,
+          'node' => node_load($item->nid),
+        ),
+      );
+      $total_price = uc_price($price_info, $context);
+      $products[$item->nid] = array(
+        'qty' => $item->qty,
+        'total_price' => $total_price,
+        'total_price_formatted' => uc_price($total_price, array()),
+      );
+      $subtotal += $products[$item->nid]['total_price'];
+    }
+  }
+  $subtotal_formatted = uc_price($subtotal, array());
+//dpm($products);
+//dsm("gas_catalog_form 0: $cart_id - $subtotal_formatted");
+  $view_results = $vars['view']->result;
+  $view_rows = $vars['rows'];
+  $form = array();
+//  $form['#view'] = $view;
+
+  $form['cid'] = array('#type' => 'value', '#value' => $cart_id);
+  $form['items'] = array(
+    '#tree' => TRUE,
+  );
+
+  // get nid from result
+  $product_nids = array();
+
+  foreach($view_results as $row => $result) {
+
+    // set values
+    $vrow = $view_rows[$row];
+    $note_array = array();
+    $note = implode(' - ', array_filter(array($vrow['field_type_value'], $vrow['field_note_value'])));
+
+    if($order_status) {
+      $form_qty = array(
+        '#type' => 'textfield',
+        '#size' => 4,
+        '#default_value' => isset($products[$result->nid]) ? $products[$result->nid]['qty'] : 0,
+      );
+    }
+    else {
+      $form_qty = array(
+        '#value' => isset($products[$result->nid]) ? $products[$result->nid]['qty'] : 0,
+      );
+    }
+    $form['items'][$row] = array(
+      'nid' => array(
+        '#type' => 'value',
+        '#value' => $result->nid,
+      ),
+      'product' => array('#value' => $vrow['title']),
+      'note' => array('#value' => $note),
+      'sell_price' => array('#value' => $vrow['sell_price']),
+      'fee' => array('#value' => $vrow['field_fee_value'] ? $vrow['field_fee_value'] : '-'),
+      'qty' => $form_qty,
+      'unit' => array('#value' => $vrow['field_unity_value']),
+      'total_price' => array('#value' => isset($products[$result->nid]) ? $products[$result->nid]['total_price_formatted'] : 0),
+    );
+  }
+  $form['subtotal'] = array('#value' => $subtotal_formatted);
+  if($order_status) {
+    $form['update'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save'),
+      '#submit' => array('gas_catalog_form_submit'),
+    );
+  }
+/*
+  $form['checkout'] = array(
+    '#type' => 'submit',
+    '#value' => t('Checkout'),
+    '#submit' => array('gas_catalog_form_submit', 'uc_cart_view_form_submit'),
+  );
+*/
+  return $form;
+
+}
+
+function theme_gas_catalog_form($form) {
+
+  $header = array(t('Prodotto'), t('Note'), t('Prezzo'), t('Supplemento'), t('Quantity'), t('Unit'), t('Total'));
+  $rows = array();
+  foreach(element_children($form['items']) as $id) {
+    $row = array();
+    $row[] = drupal_render($form['items'][$id]['nid']) . drupal_render($form['items'][$id]['product']);
+    $row[] = drupal_render($form['items'][$id]['note']);
+    $row[] = array('data' => drupal_render($form['items'][$id]['sell_price']), 'align' => 'right');
+    $row[] = drupal_render($form['items'][$id]['fee']);
+    $row[] = drupal_render($form['items'][$id]['qty']);
+    $row[] = drupal_render($form['items'][$id]['unit']);
+    $row[] = array('data' => drupal_render($form['items'][$id]['total_price']), 'align' => 'right');
+    $rows[] = array('data' => $row, 'class' => ($form['items'][$id]['qty']['#default_value']>0) ? 'cart-qty' : ''); 
+  }
+  $rows[] = array(array('data' => t('Total') . ' ' . drupal_render($form['subtotal']), 'align' => 'right', 'colspan' => 7, 'style' => 'font-weight: bold'));
+  $out = theme('table', $header, $rows);
+  $out .= drupal_render($form);
+  return $out;
+}
+
+function gas_catalog_form_submit($form, &$form_state) {
+//  dsm('gas_catalog_form_submit');
+//dpm($form_state);
+  $cid = $form_state['values']['cid'];
+  uc_cart_empty($cid);
+  foreach($form_state['values']['items'] as $id => $item) {
+    $data = module_invoke_all('add_to_cart_data', $item, NULL, NULL);
+    $data['module'] = 'uc_product';
+    if($item['qty'] > 0) {
+      uc_cart_add_item($item['nid'], $item['qty'], $data, $cid, FALSE);
+    }
+  }
+
+  uc_cart_get_contents($cid, 'rebuild');
+}
+
+/**
+ * Ubercart price handler
+ */
+function gas_uc_price_handler() {
+  return array(
+    'alter' => array(
+      'title' => t('Gas price alterer'),
+      'description' => t('Modifies prices to include fixed cost before checkout.'),
+      'callback' => 'gas_price_handler_alter',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_price_handler_alter()
+ * to handle supplement
+ */
+function gas_price_handler_alter(&$price_info, &$context, &$options) {
+  if(in_array($context['type'], array('cart_item', 'order_product'))) {
+//dsm('gas_price_handler_alter: ' . $context['type']);
+    $node = $context['subject']['node'];
+    $supplement = isset($node->field_fee[0]['value']) ? $node->field_fee[0]['value'] : 0;
+    $price_info['placeholder'] = $price_info['price'] * $price_info['qty'] + $supplement;
+    $context['revision'] = 'formatted';
+  }
+}
+
+/**
+ * Implementation of hook_rules_action_info().
+ * @ingroup rules
+ */
+function gas_rules_action_info() {
+  return array(
+    'gas_rules_action_process_listino' => array(
+      'label' => t('Process listino'),
+      'arguments' => array(
+        'node' => array('type' => 'node', 'label' => t('Listino')),
+      ),
+      'module' => 'Gas',
+    ),
+    'gas_rules_action_process_cart' => array(
+      'label' => t('Place order from cart'),
+      'arguments' => array(
+        'node' => array('type' => 'node', 'label' => t('Listino')),
+        'user' => array('type' => 'user', 'label' => t('Cart user')),
+      ),
+      'module' => 'Gas',
+    ),
+  );
+}
+
+/**
+ * The implementation callback for 'Process listino'.
+ */
+function gas_rules_action_process_listino($node, $settings) {
+  $query = "SELECT distinct(cart_id)  FROM {uc_cart_products} WHERE cart_id LIKE '%%-%s'";
+  $result = db_query($query, $node->nid);
+
+  while($cid = db_result($result)) {
+    list($uid, $nid) = explode('-', $cid);
+    $user = user_load($uid);
+    gas_rules_action_process_cart($node, $user, NULL);
+//    uc_cart_empty($cid);
+  }
+}
+
+/**
+ * The implementation callback for 'Place order from cart'.
+ * http://blog.gabrielsomoza.com/drupal/programmatically-creating-and-submitting-orders-in-drupal/
+ */
+function gas_rules_action_process_cart($node, $user, $settings) {
+
+  // set payment method
+  $payment_method = 'store_credit';
+
+  // get cart id
+  $cid = $user->uid . '-' . $node->nid;
+
+  // get products from cart
+  $products = uc_cart_get_contents($cid);
+
+  if(empty($products)) {
+
+  }
+  else {
+
+    // Create the order and gather user information
+    $order = uc_order_new($user->uid, 'in_checkout');
+    $order_id = $order->order_id;
+
+    // Populate the order
+    $order->products = $products;
+    $order->payment_method = $payment_method;
+
+    // Complete the sale
+    uc_order_save($order);
+/*
+    uc_cart_complete_sale($order, TRUE);
+//dpm($order);
+    $order = uc_order_load($order_id);
+//dpm($order);
+
+    // Submit the payment
+    uc_payment_enter($order->order_id, $payment_method, $order->order_total, $user->uid, NULL, t('Checkout completed for an order.'));
+*/
+  }
+
+}
+
+/**
+ * Implementation of action_info hook
+ */
+function gas_action_info() {
+  return array(
+    'gas_action_process_order' => array(
+      'description' => t('Process user order with payments'),
+      'type' => 'order',
+    ),
+  );
+}
+
+/**
+ * The implementation callback for action Process order
+ * http://blog.gabrielsomoza.com/drupal/programmatically-creating-and-submitting-orders-in-drupal/
+ */
+function gas_action_process_order($order, $context=array()) {
+
+  // set payment method
+  $payment_method = 'store_credit';
+
+dsm('gas_action_process_order');
+dpm($order);
+dpm($context);
+
+/*
+  $order = uc_order_load($order_id);
+*/
+  uc_cart_complete_sale($order, TRUE);
+  $order = uc_order_load($order->order_id);
+dpm($order);
+  // Submit the payment
+  uc_payment_enter($order->order_id, $payment_method, $order->order_total, $order->uid, NULL, t('Checkout completed for order !oid.', array('oid' => $order->order_id)));
+
+}
+
+
+function gas_views_query_alter(&$view, &$query) {
+//dsm($view->name);dsm($view->current_display);
+
+  if(($view->name == 'gas_catalog_TEST') && ($view->current_display == 'panel_pane_4')) {
+//    $query->where[0]['clauses'][] = 'uc_cart_products.cart_id <> 0';
+    unset($query->fields['uc_cart_products_cart_id_']);
+    unset($view->field['uc_cart_products_cart_id_']);
+//dpm($view);
+  }
+}

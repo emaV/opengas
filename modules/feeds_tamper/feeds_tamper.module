@@ -11,6 +11,11 @@
 * This is the meat of the whole deal.  After every Feeds run, before going into
 * processing, this gets called and modifies the data based on the configuration.
 */
+function feeds_tamper_feeds_after_import(FeedsImporter $importer, FeedsSource $source) {
+  watchdog("f_after_parse", "I: " . print_r($importer, TRUE));
+  watchdog("f_after_parse", "S: " . print_r($source, TRUE));
+}
+
 function feeds_tamper_feeds_after_parse(FeedsImporter $importer, FeedsSource $source) {
   $importer_instances = feeds_tamper_load_by_importer($source->importer->id);
   if (empty($importer_instances)) {

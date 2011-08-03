@@ -1,0 +1,61 @@
+<?php
+
+/**
+ * @file
+ * Defines the database schema for the Store Credit module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function uc_store_credit_install() {
+  drupal_install_schema('uc_store_credit');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function uc_store_credit_schema() {
+  $schema = array();
+
+  $schema['uc_store_credit_values'] = array(
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The {node}.nid of this product.',
+      ),
+      'store_credit_value' => array(
+        'type' => 'numeric',
+        'precision' => 15,
+        'scale' => 3,
+        'not null' => TRUE,
+        'default' => 0.0,
+        'description' => 'The price of thie product in credits.',
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function uc_store_credit_uninstall() {
+  drupal_uninstall_schema('uc_store_credit_values');
+
+  variable_del('uc_store_credit_handler');
+  variable_del('uc_store_credit_hide_method');
+  variable_del('uc_store_credit_product_conversion_rate');
+  variable_del('uc_store_credit_line_item_conversion_rate');
+  variable_del('uc_store_credit_title');
+  variable_del('uc_store_credit_unit');
+  variable_del('uc_store_credit_error_message');
+
+  foreach (module_invoke_all('product_types') as $type) {
+    variable_del('uc_store_credit_'. $type .'_value');
+  }
+}

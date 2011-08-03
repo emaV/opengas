@@ -101,6 +101,16 @@ function flag_views_api() {
 }
 
 /**
+ * Implements hook_ctools_plugin_directory().
+ */
+function flag_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && !empty($plugin)) {
+    return "plugins/$plugin";
+  }
+}
+
+
+/**
  * Implementation of hook_perm().
  */
 function flag_perm() {

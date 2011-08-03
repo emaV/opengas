@@ -70,7 +70,9 @@
 function uc_price($price_info, $context, $options = array()) {
   global $user;
   $values = array();
-
+//dsm("uc_price: " . $context['type']);
+//dsm("uc_price"); 
+//dpm(array($price_info, $context, $options));
   // If we're passed just a number for price, we'll set the quantity to 1.
   if (is_numeric($price_info)) {
     $price_info = array(
@@ -166,7 +168,10 @@ function uc_price($price_info, $context, $options = array()) {
       cache_set($key, $values, 'cache_uc_price', CACHE_TEMPORARY);
     }
   }
-
+//if($context['type'] == 'cart_item') {
+//  dpm(array($price_info, $context, $options)); 
+//dpm($values);
+//}
   // Return the requested revision.
   return $values[$context['revision']];
 }

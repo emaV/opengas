@@ -785,14 +785,12 @@ function uc_views_views_data() {
       'handler' => 'uc_views_handler_field_cart_user',
       'click sortable' => TRUE,
     ),
-    /*
     'argument' => array(
       'handler' => 'views_handler_argument_user_uid',
       'name field' => 'name', // the field to display in the summary.
       'numeric' => TRUE,
       'validate type' => 'cart_id',
     ),
-    */
     'sort' => array(
       'handler' => 'views_handler_sort',
     ),

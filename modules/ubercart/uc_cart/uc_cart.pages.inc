@@ -272,7 +272,7 @@ function theme_uc_cart_checkout_form($form) {
  */
 function uc_cart_checkout_form_validate($form, &$form_state) {
   global $user;
-
+dpm($form_state);
   if (empty($_SESSION['cart_order'])) {
     $order = uc_order_new($user->uid);
     $_SESSION['cart_order'] = $order->order_id;
@@ -325,7 +325,7 @@ function uc_cart_checkout_form_validate($form, &$form_state) {
   }
 
   $order->line_items = uc_order_load_line_items($order, TRUE);
-
+dpm($order);
   uc_order_save($order);
 }
 

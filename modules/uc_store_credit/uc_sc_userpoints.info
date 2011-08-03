@@ -1,0 +1,13 @@
+name = Store Credit: User Points
+description = Allows you to use User Points as store credit for paying for orders in Ubercart.
+dependencies[] = uc_store_credit
+dependencies[] = userpoints
+package = Ubercart - payment
+core = 6.x
+
+; Information added by drupal.org packaging script on 2011-02-25
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "uc_store_credit"
+datestamp = "1298620529"
+

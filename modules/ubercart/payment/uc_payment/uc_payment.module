@@ -371,7 +371,8 @@ function uc_payment_get_totals($return = FALSE, $order = NULL) {
         }
       }
     }
-
+//dsm("uc_order_get_total");
+//dpm($order);
     $context['revision'] = 'themed';
     $context['type'] = 'amount';
     unset($context['subject']);

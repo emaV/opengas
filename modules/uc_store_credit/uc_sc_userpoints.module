@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * @file
+ * Integrates the User Points module with UC Store Credit.
+ *
+ * This module depends on User Points which may downloaded from:
+ * http://drupal.org/project/userpoints
+ */
+
+
+/**
+ * Implementation of hook_uc_store_credit().
+ */
+function uc_sc_userpoints_uc_store_credit() {
+  // Provide a store credit handler for the User Points module.
+  return array('uc_sc_userpoints_handler' => t('User Points'));
+}
+
+/**
+ * Provides a default example handler for the User Points module.
+ */
+function uc_sc_userpoints_handler($op, $uid, $total = NULL) {
+  switch ($op) {
+    // Get the total number of User Points of a user.
+    case 'user_total':
+      // Return 0 for anonymous users.
+      if ($uid == 0) {
+        return 0;
+      }
+      return userpoints_get_current_points($uid, 'all');
+
+    // Subtract points from a user.
+    case 'subtract':
+      $result = userpoints_userpointsapi(array('uid' => $uid, 'points' => -$total, 'display' => FALSE, 'description' => t('Store credit')));
+      return $result['status'];
+
+    case 'add':
+      $result = userpoints_userpointsapi(array('uid' => $uid, 'points' => $total, 'display' => FALSE, 'description' => t('Store credit')));
+      return $result['status'];
+  }
+}
+

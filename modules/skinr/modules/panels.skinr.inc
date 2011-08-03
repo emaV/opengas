@@ -378,20 +378,6 @@ function panels_skinr_preprocess_index_handler(&$vars) {
 // Panels hooks.
 
 /**
- * Implementation of hook_ctools_plugin_directory() to let the system know
- * we implement panels plugins.
- */
-function skinr_ctools_plugin_directory($module, $plugin) {
-  // Safety: go away if CTools is not at an appropriate version.
-  if (!module_invoke('ctools', 'api_version', PANELS_REQUIRED_CTOOLS_API)) {
-    return;
-  }
-  if ($module == 'panels') {
-    return 'modules/panels';
-  }
-}
-
-/**
  * Implementation of hook_ctools_plugin_api().
  */
 function skinr_ctools_plugin_api($module, $api) {
