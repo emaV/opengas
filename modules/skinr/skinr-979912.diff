@@ -1,0 +1,56 @@
+=== modified file 'modules/panels.skinr.inc'
+--- modules/panels.skinr.inc	2011-05-26 18:03:44 +0000
++++ modules/panels.skinr.inc	2011-06-29 02:30:21 +0000
+@@ -378,20 +378,6 @@
+ // Panels hooks.
+ 
+ /**
+- * Implementation of hook_ctools_plugin_directory() to let the system know
+- * we implement panels plugins.
+- */
+-function skinr_ctools_plugin_directory($module, $plugin) {
+-  // Safety: go away if CTools is not at an appropriate version.
+-  if (!module_invoke('ctools', 'api_version', PANELS_REQUIRED_CTOOLS_API)) {
+-    return;
+-  }
+-  if ($module == 'panels') {
+-    return 'modules/panels';
+-  }
+-}
+-
+-/**
+  * Implementation of hook_ctools_plugin_api().
+  */
+ function skinr_ctools_plugin_api($module, $api) {
+@@ -402,4 +388,4 @@
+ 
+ /**
+  * @}
+- */
+\ No newline at end of file
++ */
+
+=== modified file 'skinr.module'
+--- skinr.module	2011-05-26 18:03:44 +0000
++++ skinr.module	2011-06-29 02:30:30 +0000
+@@ -699,3 +699,19 @@
+     }
+   }
+ }
++
++/**
++ * Implementation of hook_ctools_plugin_directory() to let the system know
++ * we implement panels plugins.
++ */
++function skinr_ctools_plugin_directory($module, $plugin) {
++  // Safety: go away if CTools is not at an appropriate version.
++  if (!module_invoke('ctools', 'api_version', PANELS_REQUIRED_CTOOLS_API)) {
++    return;
++  }
++  if ($module == 'panels') {
++    return 'modules/panels';
++  }
++}
++
++
+
