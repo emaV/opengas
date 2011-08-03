@@ -1,0 +1,100 @@
+<?php
+// $Id: node_flag_name.inc,v 1.7.2.2 2009/11/13 00:44:16 merlinofchaos Exp $
+
+/**
+ * @file
+ * Plugin to provide access control based upon node type.
+ */
+
+/**
+ * Plugins are described by creating a $plugin array which will be used
+ * by the system that includes this file.
+ */
+$plugin = array(
+  'title' => t("Node: Flag name"),
+  'description' => t('Control access by node flag.'),
+  'callback' => 'ctools_flag_name_ctools_access_check',
+  'default' => array('flag_name' => array()),
+  'settings form' => 'ctools_flag_name_ctools_access_settings',
+  'settings form submit' => 'ctools_flag_name_ctools_access_settings_submit',
+  'summary' => 'ctools_flag_name_ctools_access_summary',
+  'required context' => new ctools_context_required(t('Node'), 'node'),
+  'restrictions' => 'ctools_flag_name_ctools_access_restrictions',
+);
+
+/**
+ * Settings form for the 'by flag_name' access plugin
+ */
+function ctools_flag_name_ctools_access_settings(&$form, &$form_state, $conf) {
+  $options = array();
+  foreach (flag_get_flags() as $flag) {
+    $options[$flag->name] = $flag->title;
+  }
+
+  $form['settings']['flag_name'] = array(
+    '#title' => t('Flag name'),
+    '#type' => 'select',
+    '#options' => $options,
+    '#description' => t('Select a flag.'),
+    '#default_value' => $conf['flag_name'],
+  );
+}
+
+/**
+ * Compress the node_types allowed to the minimum.
+ */
+function ctools_flag_name_ctools_access_settings_submit(&$form, &$form_state) {
+  $form_state['values']['settings']['flag_name'] = array_filter($form_state['values']['settings']['flag_name']);
+}
+
+/**
+ * Check for access.
+ */
+function ctools_flag_name_ctools_access_check($conf, $context) {
+  // As far as I know there should always be a context at this point, but this
+  // is safe.
+  if (empty($context) || empty($context->data)) {
+    return FALSE;
+  }
+
+  if (array_filter($conf['flag_name']) && empty($conf['flag_name'][$context->data->flag_name])) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * Inform the UI that we've eliminated a bunch of possibilities for this
+ * context.
+ */
+function ctools_flag_name_ctools_access_restrictions($conf, &$context) {
+  if (isset($context->restrictions['flag_name'])) {
+    $context->restrictions['flag_name'] = array_unique(array_merge($context->restrictions['flag_name'], array_keys(array_filter($conf['flag_name']))));
+  }
+  else {
+    $context->restrictions['flag_name'] = array_keys(array_filter($conf['flag_name']));
+  }
+}
+
+/**
+ * Provide a summary description based upon the checked node_types.
+ */
+function ctools_flag_name_ctools_access_summary($conf, $context) {
+  if (!isset($conf['flag_name'])) {
+    $conf['flag_name'] = array();
+  }
+  $types = node_get_types();
+
+  $names = array();
+  foreach (array_filter($conf['flag_name']) as $type) {
+    $names[] = check_plain($types[$type]->name);
+  }
+
+  if (empty($names)) {
+    return t('@identifier is any node type', array('@identifier' => $context->identifier));
+  }
+
+  return format_plural(count($names), '@identifier is type "@types"', '@identifier type is one of "@types"', array('@types' => implode(', ', $names), '@identifier' => $context->identifier));
+}
+
